@@ -12,7 +12,6 @@ import pytest
 # cisagov Libraries
 from cyhy_cvesync import DEFAULT_CVE_URL_PATTERN, __version__
 from cyhy_cvesync.cve_sync import fetch_cve_data, process_cve_json, process_urls
-from cyhy_db.models import CVEDoc
 
 # define sources of version strings
 RELEASE_TAG = os.getenv("RELEASE_TAG")
@@ -141,9 +140,6 @@ def test_fetch_real_cve_data():
 
 async def test_process_urls_create_cves():
     """Test processing URLs where new CVEs are created."""
-    # Delete any CVEs previously created in the test DB
-    await CVEDoc.delete_all()
-
     cve_json_data = {
         "CVE_data_type": "CVE",
         "CVE_Items": [
