@@ -264,7 +264,7 @@ async def test_main_async_with_args():
         mock_logging_shutdown.assert_called_once()
 
 
-async def test_generate_urls():
+def test_generate_urls():
     """Test the generate_urls function."""
     test_first_year = 2002
     test_current_year = 2024
@@ -276,7 +276,7 @@ async def test_generate_urls():
 
     with patch("cyhy_nvdsync.main.utcnow") as mock_utcnow:
         mock_utcnow.return_value.year = test_current_year
-        urls = await generate_urls(url_pattern)
+        urls = generate_urls(url_pattern)
         assert urls == expected_urls
 
 

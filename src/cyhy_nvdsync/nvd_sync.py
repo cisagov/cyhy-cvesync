@@ -88,7 +88,7 @@ async def process_cve_json(cve_json: dict) -> Tuple[int, int]:
     return created_cve_docs_count, updated_cve_docs_count
 
 
-async def fetch_cve_data(cve_url: str, gzipped: bool) -> dict:
+def fetch_cve_data(cve_url: str, gzipped: bool) -> dict:
     """
     Fetch the CVE data from the given URL.
 
@@ -152,7 +152,7 @@ async def process_urls(
     for cve_url in cve_urls:
         logging.info("Processing URL: %s", cve_url)
 
-        cve_json = await fetch_cve_data(cve_url, cve_data_gzipped)
+        cve_json = fetch_cve_data(cve_url, cve_data_gzipped)
 
         # Process the CVE JSON data and update the database
         created_count, updated_count = await process_cve_json(cve_json)

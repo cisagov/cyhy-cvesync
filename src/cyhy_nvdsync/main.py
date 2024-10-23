@@ -23,7 +23,7 @@ NVD_FIRST_YEAR = 2002
 logger = logging.getLogger(f"{CYHY_ROOT_LOGGER}.{__name__}")
 
 
-async def generate_urls(url_pattern: str) -> list[str]:
+def generate_urls(url_pattern: str) -> list[str]:
     """Return the NVD URLs for each year."""
     current_year = utcnow().year
     years = list(range(NVD_FIRST_YEAR, current_year + 1))
@@ -52,7 +52,7 @@ async def do_nvd_sync(
     await initialize_db(config.nvdsync.db_auth_uri, config.nvdsync.db_name)
 
     # Generate the list of NVD URLs containing JSON data
-    nvd_urls = await generate_urls(config.nvdsync.json_url_pattern)
+    nvd_urls = generate_urls(config.nvdsync.json_url_pattern)
     logger.info("URLs to synchronize:\n%s", nvd_urls)
 
     # Fetch the NVD URLs and put the CVE data into the database
