@@ -6,11 +6,11 @@ from typing import Optional
 # Third-Party Libraries
 from pydantic import BaseModel, ConfigDict, Field
 
-from .. import DEFAULT_NVD_URL_PATTERN
+from .. import DEFAULT_CVE_URL_PATTERN
 
 
-class NVDSync(BaseModel):
-    """Definition of a NVD Sync configuration."""
+class CVESync(BaseModel):
+    """Definition of a CVE Sync configuration."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -20,12 +20,12 @@ class NVDSync(BaseModel):
     db_name: str = Field(description="MongoDB database name")
     json_url_gzipped: bool = Field(
         default=True,
-        description="Whether the NVD JSON files are gzipped",
+        description="Whether the CVE JSON files are gzipped",
     )
     json_url_pattern: str = Field(
         pattern=r"^https?://",
-        default=DEFAULT_NVD_URL_PATTERN,
-        description="URL pattern for the NVD JSON file; note that {year} in the pattern will be substituted with each valid year",
+        default=DEFAULT_CVE_URL_PATTERN,
+        description="URL pattern for the CVE JSON file; note that {year} in the pattern will be substituted with each valid year",
     )
     log_level: Optional[str] = Field(
         None,
@@ -33,9 +33,9 @@ class NVDSync(BaseModel):
     )
 
 
-class NVDSyncConfig(BaseModel):
-    """Definition of the NVDSync configuration root."""
+class CVESyncConfig(BaseModel):
+    """Definition of the CVESync configuration root."""
 
     model_config = ConfigDict(extra="ignore")
 
-    nvdsync: NVDSync
+    cvesync: CVESync

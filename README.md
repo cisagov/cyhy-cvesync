@@ -1,13 +1,13 @@
-# cyhy-nvdsync #
+# cyhy-cvesync #
 
-[![GitHub Build Status](https://github.com/cisagov/cyhy-nvdsync/workflows/build/badge.svg)](https://github.com/cisagov/cyhy-nvdsync/actions)
-[![CodeQL](https://github.com/cisagov/cyhy-nvdsync/workflows/CodeQL/badge.svg)](https://github.com/cisagov/cyhy-nvdsync/actions/workflows/codeql-analysis.yml)
-[![Coverage Status](https://coveralls.io/repos/github/cisagov/cyhy-nvdsync/badge.svg?branch=develop)](https://coveralls.io/github/cisagov/cyhy-nvdsync?branch=develop)
-[![Known Vulnerabilities](https://snyk.io/test/github/cisagov/cyhy-nvdsync/develop/badge.svg)](https://snyk.io/test/github/cisagov/cyhy-nvdsync)
+[![GitHub Build Status](https://github.com/cisagov/cyhy-cvesync/workflows/build/badge.svg)](https://github.com/cisagov/cyhy-cvesync/actions)
+[![CodeQL](https://github.com/cisagov/cyhy-cvesync/workflows/CodeQL/badge.svg)](https://github.com/cisagov/cyhy-cvesync/actions/workflows/codeql-analysis.yml)
+[![Coverage Status](https://coveralls.io/repos/github/cisagov/cyhy-cvesync/badge.svg?branch=develop)](https://coveralls.io/github/cisagov/cyhy-cvesync?branch=develop)
+[![Known Vulnerabilities](https://snyk.io/test/github/cisagov/cyhy-cvesync/develop/badge.svg)](https://snyk.io/test/github/cisagov/cyhy-cvesync)
 
-`cyhy-nvdsync` is Python library that can retrieve JSON files containing Common
+`cyhy-cvesync` is Python library that can retrieve JSON files containing Common
 Vulnerabilities and Exposures (CVE) data (such as those from the [National
-Vulnerability Database (NVD)](https://nvd.nist.gov/)) and import the data into a
+Vulnerability Database (CVE)](https://nvd.nist.gov/)) and import the data into a
 MongoDB collection.
 
 ## Pre-requisites ##
@@ -30,7 +30,7 @@ pytest -vs --mongo-express
 
 > [!NOTE]
 > The command `pytest -vs --mongo-express` not only starts a local
-> MongoDB instance, but also runs all the `cyhy-nvdsync` unit tests, which will
+> MongoDB instance, but also runs all the `cyhy-cvesync` unit tests, which will
 > create various collections and documents in the database.
 
 Sample output (trimmed to highlight the important parts):
@@ -58,8 +58,8 @@ and then load the data into to your database.
 import asyncio
 from cyhy_db import initialize_db
 from cyhy_db.models import CVEDoc
-from cyhy_nvdsync import DEFAULT_NVD_URL_PATTERN
-from cyhy_nvdsync.nvd_sync import process_urls
+from cyhy_cvesync import DEFAULT_CVE_URL_PATTERN
+from cyhy_cvesync.cve_sync import process_urls
 
 async def main():
     # Initialize the CyHy database
@@ -70,7 +70,7 @@ async def main():
     print(f"CVE documents in DB before sync: {cve_count_before}")
 
     # Fetch CVE data from the default source for a single year and sync it to the database
-    created_cve_docs_count, updated_cve_docs_count, deleted_cve_docs_count = await process_urls([DEFAULT_NVD_URL_PATTERN.format(year=2024)], cve_data_gzipped=True)
+    created_cve_docs_count, updated_cve_docs_count, deleted_cve_docs_count = await process_urls([DEFAULT_CVE_URL_PATTERN.format(year=2024)], cve_data_gzipped=True)
 
     print(f"Created CVE documents: {created_cve_docs_count}")
     print(f"Updated CVE documents: {updated_cve_docs_count}")

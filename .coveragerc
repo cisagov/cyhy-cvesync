@@ -2,7 +2,7 @@
 # https://coverage.readthedocs.io/en/latest/config.html
 
 [run]
-source = src/cyhy_nvdsync
+source = src/cyhy_cvesync
 omit =
 branch = true
 

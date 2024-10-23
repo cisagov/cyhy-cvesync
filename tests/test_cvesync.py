@@ -10,9 +10,9 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import pytest
 
 # cisagov Libraries
+from cyhy_cvesync import DEFAULT_CVE_URL_PATTERN, __version__
+from cyhy_cvesync.cve_sync import fetch_cve_data, process_cve_json, process_urls
 from cyhy_db.models import CVEDoc
-from cyhy_nvdsync import DEFAULT_NVD_URL_PATTERN, __version__
-from cyhy_nvdsync.nvd_sync import fetch_cve_data, process_cve_json, process_urls
 
 # define sources of version strings
 RELEASE_TAG = os.getenv("RELEASE_TAG")
@@ -39,13 +39,13 @@ async def test_connection_motor(db_uri, db_name):
 
 async def test_process_cve_json_invalid_cve_data_type():
     """Test processing invalid CVE JSON data."""
-    with pytest.raises(ValueError, match="JSON does not look like valid NVD CVE data."):
+    with pytest.raises(ValueError, match="JSON does not look like valid CVE CVE data."):
         await process_cve_json({"CVE_data_type": "INVALID", "CVE_Items": []})
 
 
 async def test_process_cve_json_malformed_1():
     """Test processing malformed CVE JSON data."""
-    with pytest.raises(ValueError, match="JSON does not look like valid NVD CVE data."):
+    with pytest.raises(ValueError, match="JSON does not look like valid CVE CVE data."):
         await process_cve_json(
             {
                 "CVE_data_type": "CVE",
@@ -56,7 +56,7 @@ async def test_process_cve_json_malformed_1():
 
 async def test_process_cve_json_malformed_2():
     """Test processing malformed CVE JSON data."""
-    with pytest.raises(ValueError, match="JSON does not look like valid NVD CVE data."):
+    with pytest.raises(ValueError, match="JSON does not look like valid CVE CVE data."):
         await process_cve_json(
             {
                 "CVE_data_type": "CVE",
@@ -90,7 +90,7 @@ async def test_process_cve_json_empty_id():
 @patch("urllib.request.urlopen")
 def test_fetch_cve_data_invalid_url_scheme(mock_urlopen):
     """Test fetching CVE data with an invalid URL scheme."""
-    cve_json_url = "ftp://example.com/nvd.json"
+    cve_json_url = "ftp://example.com/cve.json"
 
     with pytest.raises(ValueError, match="Invalid URL scheme in CVE JSON URL: ftp"):
         fetch_cve_data(cve_json_url, gzipped=False)
@@ -105,7 +105,7 @@ def test_fetch_cve_data_json_decode_error(mock_urlopen):
     mock_urlopen.return_value.__enter__.return_value = mock_response
 
     with pytest.raises(json.JSONDecodeError):
-        fetch_cve_data("https://example.com/nvd.json", gzipped=False)
+        fetch_cve_data("https://example.com/cve.json", gzipped=False)
 
 
 @patch("urllib.request.urlopen")
@@ -116,7 +116,7 @@ def test_fetch_cve_data_non_200_response(mock_urlopen):
     mock_urlopen.return_value.__enter__.return_value = mock_response
 
     with pytest.raises(Exception, match="Failed to retrieve CVE data."):
-        fetch_cve_data("https://example.com/nvd.json", gzipped=False)
+        fetch_cve_data("https://example.com/cve.json", gzipped=False)
 
 
 @patch("urllib.request.urlopen")
@@ -128,12 +128,12 @@ def test_fetch_cve_data_empty_response(mock_urlopen):
     mock_urlopen.return_value.__enter__.return_value = mock_response
 
     with pytest.raises(ValueError, match="Empty response received from the server."):
-        fetch_cve_data("https://example.com/nvd.json", gzipped=False)
+        fetch_cve_data("https://example.com/cve.json", gzipped=False)
 
 
 def test_fetch_real_cve_data():
     """Test fetching CVE data."""
-    cve_url = DEFAULT_NVD_URL_PATTERN.format(year=2024)
+    cve_url = DEFAULT_CVE_URL_PATTERN.format(year=2024)
     cve_json = fetch_cve_data(cve_url, gzipped=True)
     assert "CVE_Items" in cve_json, "Expected 'CVE_Items' in CVE data"
     assert len(cve_json["CVE_Items"]) > 0, "Expected at least one CVE item in CVE data"
@@ -167,7 +167,7 @@ async def test_process_urls_create_cves():
             },
         ],
     }
-    with patch("cyhy_nvdsync.nvd_sync.fetch_cve_data", return_value=cve_json_data):
+    with patch("cyhy_cvesync.cve_sync.fetch_cve_data", return_value=cve_json_data):
         created, updated, deleted = await process_urls(
             ["https://example.com/cve.json"], cve_data_gzipped=False
         )
@@ -201,7 +201,7 @@ async def test_process_urls_update_cves():
             },
         ],
     }
-    with patch("cyhy_nvdsync.nvd_sync.fetch_cve_data", return_value=cve_json_data):
+    with patch("cyhy_cvesync.cve_sync.fetch_cve_data", return_value=cve_json_data):
         created, updated, deleted = await process_urls(
             ["https://example.com/cve.json"], cve_data_gzipped=False
         )
@@ -229,7 +229,7 @@ async def test_process_urls_delete_cves():
             },
         ],
     }
-    with patch("cyhy_nvdsync.nvd_sync.fetch_cve_data", return_value=cve_json_data):
+    with patch("cyhy_cvesync.cve_sync.fetch_cve_data", return_value=cve_json_data):
         created, updated, deleted = await process_urls(
             ["https://example.com/cve.json"], cve_data_gzipped=False
         )
@@ -257,7 +257,7 @@ async def test_process_urls_create_update_delete_cves():
             },
         ],
     }
-    with patch("cyhy_nvdsync.nvd_sync.fetch_cve_data", return_value=cve_json_data):
+    with patch("cyhy_cvesync.cve_sync.fetch_cve_data", return_value=cve_json_data):
         created, updated, deleted = await process_urls(
             ["https://example.com/cve.json"], cve_data_gzipped=False
         )

@@ -1,4 +1,4 @@
-"""cyhy_nvdsync Python library and tool."""
+"""cyhy_cvesync Python library and tool."""
 
 # Standard Python Libraries
 import argparse
@@ -17,53 +17,53 @@ from cyhy_db import initialize_db
 from cyhy_db.utils.time import utcnow
 
 from ._version import __version__
-from .models.config_model import NVDSyncConfig
-from .nvd_sync import process_urls
+from .cve_sync import process_urls
+from .models.config_model import CVESyncConfig
 
-NVD_FIRST_YEAR = 2002
+CVE_FIRST_YEAR = 2002
 
 logger = logging.getLogger(f"{CYHY_ROOT_LOGGER}.{__name__}")
 
 
 def generate_urls(url_pattern: str) -> list[str]:
-    """Return the NVD URLs for each year."""
+    """Return the CVE URLs for each year."""
     current_year = utcnow().year
-    years = list(range(NVD_FIRST_YEAR, current_year + 1))
+    years = list(range(CVE_FIRST_YEAR, current_year + 1))
     return [url_pattern.format(**{"year": year}) for year in years]
 
 
-async def do_nvd_sync(
+async def do_cve_sync(
     config_file: Optional[str] = None, arg_log_level: Optional[str] = None
 ) -> None:
-    """Perform the NVD synchronization."""
+    """Perform the CVE synchronization."""
     setup_logging(arg_log_level)
 
     # Get the configuration
     try:
-        config = get_config(file_path=config_file, model=NVDSyncConfig)
+        config = get_config(file_path=config_file, model=CVESyncConfig)
     except ValidationError:
         sys.exit(1)
     except FileNotFoundError:
         sys.exit(1)
 
-    if not arg_log_level and config.nvdsync.log_level:
+    if not arg_log_level and config.cvesync.log_level:
         # Update log levels from config if they were not set by an argument
-        setup_logging(config.nvdsync.log_level)
+        setup_logging(config.cvesync.log_level)
 
     # Initialize the database
-    await initialize_db(config.nvdsync.db_auth_uri, config.nvdsync.db_name)
+    await initialize_db(config.cvesync.db_auth_uri, config.cvesync.db_name)
 
-    # Generate the list of NVD URLs containing JSON data
-    nvd_urls = generate_urls(config.nvdsync.json_url_pattern)
-    logger.info("URLs to synchronize:\n%s", nvd_urls)
+    # Generate the list of CVE URLs containing JSON data
+    cve_urls = generate_urls(config.cvesync.json_url_pattern)
+    logger.info("URLs to synchronize:\n%s", cve_urls)
 
-    # Fetch the NVD URLs and put the CVE data into the database
+    # Fetch the CVE URLs and put the CVE data into the database
     created_cve_docs_count, updated_cve_docs_count, deleted_cve_docs_count = (
-        await process_urls(nvd_urls, config.nvdsync.json_url_gzipped)
+        await process_urls(cve_urls, config.cvesync.json_url_gzipped)
     )
 
     # Log the results
-    logger.info("NVD synchronization complete.")
+    logger.info("CVE synchronization complete.")
     logger.info("Created CVE documents: %d", created_cve_docs_count)
     logger.info("Updated CVE documents: %d", updated_cve_docs_count)
     logger.info("Deleted CVE documents: %d", deleted_cve_docs_count)
@@ -72,7 +72,7 @@ async def do_nvd_sync(
 async def main_async() -> None:
     """Set up logging and call the process function."""
     parser = argparse.ArgumentParser(
-        description="Cyber Hygiene National Vulnerability Database (NVD) synchronization tool",
+        description="Cyber Hygiene Common Vulnerabilities and Exposures (CVE) synchronization tool",
     )
     parser.add_argument(
         "--config-file",
@@ -93,7 +93,7 @@ async def main_async() -> None:
 
     args = parser.parse_args()
 
-    await do_nvd_sync(args.config_file, args.log_level)
+    await do_cve_sync(args.config_file, args.log_level)
 
     # Stop logging and clean up
     logging.shutdown()

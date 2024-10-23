@@ -182,7 +182,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "slow: mark test as slow")
 
     # Set logging level to debug for your specific logger
-    logger = logging.getLogger("cyhy_nvdsync")
+    logger = logging.getLogger("cyhy_cvesync")
     logger.setLevel(logging.DEBUG)
     logger.addHandler(RichHandler(rich_tracebacks=True, show_path=True))
 

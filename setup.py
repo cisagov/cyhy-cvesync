@@ -1,5 +1,5 @@
 """
-This is the setup module for the example project.
+This is the setup module for the cyhy-cvesync project.
 
 Based on:
 
@@ -42,10 +42,10 @@ def get_version(version_file):
 
 
 setup(
-    name="cyhy-nvdsync",
+    name="cyhy-cvesync",
     # Versions should comply with PEP440
-    version=get_version("src/cyhy_nvdsync/_version.py"),
-    description="Cyber Hygiene National Vulnerability Database (NVD) synchronization tool",
+    version=get_version("src/cyhy_cvesync/_version.py"),
+    description="Cyber Hygiene Common Vulnerabilities and Exposures (CVE) synchronization tool",
     long_description=readme(),
     long_description_content_type="text/markdown",
     # Landing page for CISA's cybersecurity mission
@@ -53,8 +53,8 @@ setup(
     # Additional URLs for this project per
     # https://packaging.python.org/guides/distributing-packages-using-setuptools/#project-urls
     project_urls={
-        "Source": "https://github.com/cisagov/cyhy-nvdsync",
-        "Tracker": "https://github.com/cisagov/cyhy-nvdsync/issues",
+        "Source": "https://github.com/cisagov/cyhy-cvesync",
+        "Tracker": "https://github.com/cisagov/cyhy-cvesync/issues",
     },
     # Author details
     author="David Redmin",
@@ -80,10 +80,10 @@ setup(
     ],
     python_requires=">=3.12",
     # What does your project relate to?
-    keywords="cyhy nvd sync",
+    keywords="cyhy cve sync",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
-    package_data={"cyhy_nvdsync": ["py.typed"]},
+    package_data={"cyhy_cvesync": ["py.typed"]},
     py_modules=[splitext(basename(path))[0] for path in glob("src/*.py")],
     include_package_data=True,
     install_requires=[
@@ -105,6 +105,6 @@ setup(
             "pytest",
         ]
     },
-    # Conveniently allows one to run the CLI tool as `cyhy-nvdsync`
-    entry_points={"console_scripts": ["cyhy-nvdsync = cyhy_nvdsync.main:main"]},
+    # Conveniently allows one to run the CLI tool as `cyhy-cvesync`
+    entry_points={"console_scripts": ["cyhy-cvesync = cyhy_cvesync.main:main"]},
 )

@@ -31,7 +31,7 @@ async def process_cve_json(cve_json: dict) -> Tuple[int, int]:
     updated_cve_docs_count = 0
 
     if cve_json.get("CVE_data_type") != "CVE":
-        raise ValueError("JSON does not look like valid NVD CVE data.")
+        raise ValueError("JSON does not look like valid CVE data.")
 
     for cve in track(
         cve_json.get("CVE_Items", []),
@@ -43,7 +43,7 @@ async def process_cve_json(cve_json: dict) -> Tuple[int, int]:
             # JSON might be malformed, so we'll log what the CVE object looks like
             # and then raise an error
             logger.error("CVE object: %s", cve)
-            raise ValueError("JSON does not look like valid NVD CVE data.")
+            raise ValueError("JSON does not look like valid CVE data.")
         # All fields are there but "ID" field is empty
         if not cve_id:
             raise ValueError("CVE ID is empty.")
@@ -64,7 +64,7 @@ async def process_cve_json(cve_json: dict) -> Tuple[int, int]:
                 ]["version"]
             except KeyError:
                 logger.error("CVE object: %s", cve)
-                raise ValueError("JSON does not look like valid NVD CVE data.")
+                raise ValueError("JSON does not look like valid CVE data.")
 
             if cve_doc:  # Update existing CVE doc
                 if (
