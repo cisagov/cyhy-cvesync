@@ -9,10 +9,12 @@ from typing import Optional
 
 # Third-Party Libraries
 from cyhy_config import get_config
-from cyhy_db import initialize_db
-from cyhy_db.utils.time import utcnow
 from cyhy_logging import CYHY_ROOT_LOGGER, setup_logging
 from pydantic import ValidationError
+
+# cisagov Libraries
+from cyhy_db import initialize_db
+from cyhy_db.utils.time import utcnow
 
 from ._version import __version__
 from .models.config_model import NVDSyncConfig

@@ -9,9 +9,11 @@ from typing import Dict, List, Tuple
 import urllib.request
 
 # Third-Party Libraries
-from cyhy_db.models import CVEDoc
 from cyhy_logging import CYHY_ROOT_LOGGER
 from rich.progress import track
+
+# cisagov Libraries
+from cyhy_db.models import CVEDoc
 
 ALLOWED_URL_SCHEMES = ["http", "https"]
 CVE_URL_RETRY_WAIT_SEC = 5

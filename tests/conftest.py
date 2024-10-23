@@ -10,11 +10,13 @@ import os
 import time
 
 # Third-Party Libraries
-from cyhy_db import initialize_db
 import docker
 from motor.core import AgnosticClient
 import pytest
 from rich.logging import RichHandler
+
+# cisagov Libraries
+from cyhy_db import initialize_db
 
 MONGO_INITDB_ROOT_USERNAME = os.environ.get("MONGO_INITDB_ROOT_USERNAME", "mongoadmin")
 MONGO_INITDB_ROOT_PASSWORD = os.environ.get("MONGO_INITDB_ROOT_PASSWORD", "secret")
