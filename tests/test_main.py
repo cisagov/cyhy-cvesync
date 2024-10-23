@@ -18,212 +18,25 @@ from cyhy_nvdsync.models.config_model import (
     NVDSync,
     NVDSyncConfig,
 )
+from cyhy_nvdsync.nvd_sync import fetch_cve_data
 
-# Sample data
-VALID_CVE_JSON = {
-    "CVE_data_type": "CVE",
-    "CVE_data_format": "MITRE",
-    "CVE_data_version": "4.0",
-    "CVE_data_numberOfCVEs": "24768",
-    "CVE_data_timestamp": "2024-10-18T07:00Z",
-    "CVE_Items": [
-        {
-            "cve": {
-                "data_type": "CVE",
-                "data_format": "MITRE",
-                "data_version": "4.0",
-                "CVE_data_meta": {
-                    "ID": "CVE-2024-0001",
-                    "ASSIGNER": "psirt@purestorage.com",
-                },
-                "problemtype": {
-                    "problemtype_data": [
-                        {"description": [{"lang": "en", "value": "CWE-1188"}]}
-                    ]
-                },
-                "references": {
-                    "reference_data": [
-                        {
-                            "url": "https://purestorage.com/security",
-                            "name": "https://purestorage.com/security",
-                            "refsource": "",
-                            "tags": ["Vendor Advisory"],
-                        }
-                    ]
-                },
-                "description": {
-                    "description_data": [
-                        {
-                            "lang": "en",
-                            "value": "A condition exists in FlashArray Purity whereby a local account intended for initial array configuration remains active potentially allowing a malicious actor to gain elevated privileges.",
-                        }
-                    ]
-                },
-            },
-            "configurations": {
-                "CVE_data_version": "4.0",
-                "nodes": [
-                    {
-                        "operator": "OR",
-                        "children": [],
-                        "cpe_match": [
-                            {
-                                "vulnerable": True,
-                                "cpe23Uri": "cpe:2.3:a:purestorage:purity\\/\\/fa:*:*:*:*:*:*:*:*",
-                                "versionStartIncluding": "6.4.0",
-                                "versionEndIncluding": "6.4.10",
-                                "cpe_name": [],
-                            },
-                            {
-                                "vulnerable": True,
-                                "cpe23Uri": "cpe:2.3:a:purestorage:purity\\/\\/fa:*:*:*:*:*:*:*:*",
-                                "versionStartIncluding": "6.3.0",
-                                "versionEndIncluding": "6.3.14",
-                                "cpe_name": [],
-                            },
-                        ],
-                    }
-                ],
-            },
-            "impact": {
-                "baseMetricV3": {
-                    "cvssV3": {
-                        "version": "3.1",
-                        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
-                        "attackVector": "NETWORK",
-                        "attackComplexity": "LOW",
-                        "privilegesRequired": "NONE",
-                        "userInteraction": "NONE",
-                        "scope": "UNCHANGED",
-                        "confidentialityImpact": "HIGH",
-                        "integrityImpact": "HIGH",
-                        "availabilityImpact": "HIGH",
-                        "baseScore": 9.8,
-                        "baseSeverity": "CRITICAL",
-                    },
-                    "exploitabilityScore": 3.9,
-                    "impactScore": 5.9,
-                }
-            },
-            "publishedDate": "2024-09-23T18:15Z",
-            "lastModifiedDate": "2024-09-27T14:08Z",
-        },
-        {
-            "cve": {
-                "data_type": "CVE",
-                "data_format": "MITRE",
-                "data_version": "4.0",
-                "CVE_data_meta": {
-                    "ID": "CVE-2024-0002",
-                    "ASSIGNER": "psirt@purestorage.com",
-                },
-                "problemtype": {
-                    "problemtype_data": [
-                        {"description": [{"lang": "en", "value": "NVD-CWE-noinfo"}]}
-                    ]
-                },
-                "references": {
-                    "reference_data": [
-                        {
-                            "url": "https://purestorage.com/security",
-                            "name": "https://purestorage.com/security",
-                            "refsource": "",
-                            "tags": ["Vendor Advisory"],
-                        }
-                    ]
-                },
-                "description": {
-                    "description_data": [
-                        {
-                            "lang": "en",
-                            "value": "A condition exists in FlashArray Purity whereby an attacker can employ a privileged account allowing remote access to the array.",
-                        }
-                    ]
-                },
-            },
-            "configurations": {
-                "CVE_data_version": "4.0",
-                "nodes": [
-                    {
-                        "operator": "OR",
-                        "children": [],
-                        "cpe_match": [
-                            {
-                                "vulnerable": True,
-                                "cpe23Uri": "cpe:2.3:a:purestorage:purity\\/\\/fa:*:*:*:*:*:*:*:*",
-                                "versionStartIncluding": "6.4.0",
-                                "versionEndIncluding": "6.4.10",
-                                "cpe_name": [],
-                            },
-                            {
-                                "vulnerable": True,
-                                "cpe23Uri": "cpe:2.3:a:purestorage:purity\\/\\/fa:*:*:*:*:*:*:*:*",
-                                "versionStartIncluding": "6.3.0",
-                                "versionEndIncluding": "6.3.14",
-                                "cpe_name": [],
-                            },
-                            {
-                                "vulnerable": True,
-                                "cpe23Uri": "cpe:2.3:a:purestorage:purity\\/\\/fa:6.5.0:*:*:*:*:*:*:*",
-                                "cpe_name": [],
-                            },
-                            {
-                                "vulnerable": True,
-                                "cpe23Uri": "cpe:2.3:a:purestorage:purity\\/\\/fa:*:*:*:*:*:*:*:*",
-                                "versionStartIncluding": "6.2.0",
-                                "versionEndIncluding": "6.2.17",
-                                "cpe_name": [],
-                            },
-                            {
-                                "vulnerable": True,
-                                "cpe23Uri": "cpe:2.3:a:purestorage:purity\\/\\/fa:*:*:*:*:*:*:*:*",
-                                "versionStartIncluding": "6.1.8",
-                                "versionEndIncluding": "6.1.25",
-                                "cpe_name": [],
-                            },
-                            {
-                                "vulnerable": True,
-                                "cpe23Uri": "cpe:2.3:a:purestorage:purity\\/\\/fa:*:*:*:*:*:*:*:*",
-                                "versionStartIncluding": "6.0.7",
-                                "versionEndIncluding": "6.0.9",
-                                "cpe_name": [],
-                            },
-                            {
-                                "vulnerable": True,
-                                "cpe23Uri": "cpe:2.3:a:purestorage:purity\\/\\/fa:*:*:*:*:*:*:*:*",
-                                "versionStartIncluding": "5.3.17",
-                                "versionEndIncluding": "5.3.21",
-                                "cpe_name": [],
-                            },
-                        ],
-                    }
-                ],
-            },
-            "impact": {
-                "baseMetricV3": {
-                    "cvssV3": {
-                        "version": "3.1",
-                        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
-                        "attackVector": "NETWORK",
-                        "attackComplexity": "LOW",
-                        "privilegesRequired": "NONE",
-                        "userInteraction": "NONE",
-                        "scope": "UNCHANGED",
-                        "confidentialityImpact": "HIGH",
-                        "integrityImpact": "HIGH",
-                        "availabilityImpact": "HIGH",
-                        "baseScore": 9.8,
-                        "baseSeverity": "CRITICAL",
-                    },
-                    "exploitabilityScore": 3.9,
-                    "impactScore": 5.9,
-                }
-            },
-            "publishedDate": "2024-09-23T18:15Z",
-            "lastModifiedDate": "2024-09-27T14:13Z",
-        },
-    ],
-}
+# Download sample CVE data from the default NVD URL
+SAMPLE_CVE_JSON = fetch_cve_data(
+    DEFAULT_NVD_URL_PATTERN.format(year=2024), gzipped=True
+)
+# Create a smaller sample dictionary that includes a target number of CVEs that
+# meet our criteria
+SAMPLE_CVE_JSON_SMALL_VALID_CVES = 20
+count = 0
+hits = 0
+for cve in SAMPLE_CVE_JSON["CVE_Items"]:
+    count += 1
+    if any(k in cve["impact"] for k in ["baseMetricV2", "baseMetricV3"]):
+        hits += 1
+    if hits == SAMPLE_CVE_JSON_SMALL_VALID_CVES:
+        break
+SAMPLE_CVE_JSON_SMALL = SAMPLE_CVE_JSON.copy()
+SAMPLE_CVE_JSON_SMALL["CVE_Items"] = SAMPLE_CVE_JSON["CVE_Items"][:count]
 
 
 async def test_main_async_no_args():
@@ -291,19 +104,17 @@ async def test_do_nvd_sync_fast(capfd, db_uri, db_name):
         )
     )
     with patch("cyhy_nvdsync.main.get_config", return_value=valid_config):
-        single_cve_url = [DEFAULT_NVD_URL_PATTERN.format(year=2002)]
+        single_cve_url = [DEFAULT_NVD_URL_PATTERN.format(year=2024)]
         with patch("cyhy_nvdsync.main.generate_urls", return_value=single_cve_url):
             with patch(
                 "cyhy_nvdsync.nvd_sync.fetch_cve_data",
-                return_value=VALID_CVE_JSON,
+                return_value=SAMPLE_CVE_JSON_SMALL,
             ):
                 await do_nvd_sync(config_file=None, arg_log_level=None)
     nvd_sync_output = capfd.readouterr().out
     assert "Processing CVE feed" in nvd_sync_output
     assert "NVD synchronization complete" in nvd_sync_output
-    assert await CVEDoc.count() == 2
-    assert await CVEDoc.get("CVE-2024-0001") is not None
-    assert await CVEDoc.get("CVE-2024-0002") is not None
+    assert await CVEDoc.count() == SAMPLE_CVE_JSON_SMALL_VALID_CVES
 
 
 @pytest.mark.slow
