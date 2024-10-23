@@ -5,20 +5,112 @@
 [![Coverage Status](https://coveralls.io/repos/github/cisagov/cyhy-nvdsync/badge.svg?branch=develop)](https://coveralls.io/github/cisagov/cyhy-nvdsync?branch=develop)
 [![Known Vulnerabilities](https://snyk.io/test/github/cisagov/cyhy-nvdsync/develop/badge.svg)](https://snyk.io/test/github/cisagov/cyhy-nvdsync)
 
-This is a generic skeleton project that can be used to quickly get a
-new [cisagov](https://github.com/cisagov) Python library GitHub
-project started.  This skeleton project contains [licensing
-information](LICENSE), as well as
-[pre-commit hooks](https://pre-commit.com) and
-[GitHub Actions](https://github.com/features/actions) configurations
-appropriate for a Python library project.
+`cyhy-nvdsync` is Python library that can retrieve JSON files containing Common
+Vulnerabilities and Exposures (CVE) data (such as those from the [National
+Vulnerability Database (NVD)](https://nvd.nist.gov/)) and import the data into a
+MongoDB collection.
 
-## New Repositories from a Skeleton ##
+## Pre-requisites ##
 
-Please see our [Project Setup guide](https://github.com/cisagov/development-guide/tree/develop/project_setup)
-for step-by-step instructions on how to start a new repository from
-a skeleton. This will save you time and effort when configuring a
-new repository!
+- [Python 3.12](https://www.python.org/downloads/) or newer
+- A running [MongoDB](https://www.mongodb.com/) instance that you have access to
+
+## Starting a Local MongoDB Instance for Testing ##
+
+> [!IMPORTANT]
+> This requires [Docker](https://www.docker.com/) to be installed in
+> order for this to work.
+
+You can start a local MongoDB instance in a container with the following
+command:
+
+```console
+pytest -vs --mongo-express
+```
+
+> [!NOTE]
+> The command `pytest -vs --mongo-express` not only starts a local
+> MongoDB instance, but also runs all the `cyhy-nvdsync` unit tests, which will
+> create various collections and documents in the database.
+
+Sample output (trimmed to highlight the important parts):
+
+```console
+<snip>
+MongoDB is accessible at mongodb://mongoadmin:secret@localhost:32784 with database named "test"
+Mongo Express is accessible at http://admin:pass@localhost:8081
+
+Press Enter to stop Mongo Express and MongoDB containers...
+```
+
+Based on the example output above, you can access the MongoDB instance at
+`mongodb://mongoadmin:secret@localhost:32881` and the Mongo Express web
+interface at `http://admin:pass@localhost:8081`.  Note that the MongoDB
+containers will remain running until you press "Enter" in that terminal.
+
+## Example Usage ##
+
+Once you have a MongoDB instance running, the sample Python code below
+demonstrates how to initialize the CyHy database, fetch CVE data from a source,
+and then load the data into to your database.
+
+```python
+import asyncio
+from cyhy_db import initialize_db
+from cyhy_db.models import CVEDoc
+from cyhy_nvdsync import DEFAULT_NVD_URL_PATTERN
+from cyhy_nvdsync.nvd_sync import process_urls
+
+async def main():
+    # Initialize the CyHy database
+    await initialize_db("mongodb://mongoadmin:secret@localhost:32881", "test")
+
+    # Count number of CVE documents in DB before sync
+    cve_count_before = await CVEDoc.find_all().count()
+    print(f"CVE documents in DB before sync: {cve_count_before}")
+
+    # Fetch CVE data from the default source for a single year and sync it to the database
+    created_cve_docs_count, updated_cve_docs_count, deleted_cve_docs_count = await process_urls([DEFAULT_NVD_URL_PATTERN.format(year=2024)], cve_data_gzipped=True)
+
+    print(f"Created CVE documents: {created_cve_docs_count}")
+    print(f"Updated CVE documents: {updated_cve_docs_count}")
+    print(f"Deleted CVE documents: {deleted_cve_docs_count}")
+
+    # Count number of CVE documents in DB after sync
+    cve_count_after = await CVEDoc.find_all().count()
+    print(f"CVE documents in DB after sync: {cve_count_after}")
+
+asyncio.run(main())
+```
+
+Output:
+
+```console
+CVE documents in DB before sync: 2
+Processing CVE feed ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:16
+Deleting outdated CVE docs ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
+Created CVE documents: 11644
+Updated CVE documents: 0
+Deleted CVE documents: 2
+CVE documents in DB after sync: 11644
+```
+
+### Environment Variables ###
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `MONGO_INITDB_ROOT_USERNAME` | The MongoDB root username | `mongoadmin` |
+| `MONGO_INITDB_ROOT_PASSWORD` | The MongoDB root password | `secret` |
+| `DATABASE_NAME` | The name of the database to use for testing | `test` |
+| `MONGO_EXPRESS_PORT` | The port to use for the Mongo Express web interface | `8081` |
+
+### Pytest Options ###
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--mongo-express` | Start a local MongoDB instance and Mongo Express web interface | n/a |
+| `--mongo-image-tag` | The tag of the MongoDB Docker image to use | `docker.io/mongo:latest` |
+| `--runslow` | Run slow tests | n/a |
 
 ## Contributing ##
 
