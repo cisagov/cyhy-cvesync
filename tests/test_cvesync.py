@@ -1,4 +1,4 @@
-"""Test database connection."""
+"""Test the cve_sync module."""
 
 # Standard Python Libraries
 import json
@@ -39,13 +39,13 @@ async def test_connection_motor(db_uri, db_name):
 
 async def test_process_cve_json_invalid_cve_data_type():
     """Test processing invalid CVE JSON data."""
-    with pytest.raises(ValueError, match="JSON does not look like valid CVE CVE data."):
+    with pytest.raises(ValueError, match="JSON does not look like valid CVE data."):
         await process_cve_json({"CVE_data_type": "INVALID", "CVE_Items": []})
 
 
 async def test_process_cve_json_malformed_1():
     """Test processing malformed CVE JSON data."""
-    with pytest.raises(ValueError, match="JSON does not look like valid CVE CVE data."):
+    with pytest.raises(ValueError, match="JSON does not look like valid CVE data."):
         await process_cve_json(
             {
                 "CVE_data_type": "CVE",
@@ -56,7 +56,7 @@ async def test_process_cve_json_malformed_1():
 
 async def test_process_cve_json_malformed_2():
     """Test processing malformed CVE JSON data."""
-    with pytest.raises(ValueError, match="JSON does not look like valid CVE CVE data."):
+    with pytest.raises(ValueError, match="JSON does not look like valid CVE data."):
         await process_cve_json(
             {
                 "CVE_data_type": "CVE",

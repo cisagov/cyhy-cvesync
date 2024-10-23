@@ -7,7 +7,7 @@
 
 `cyhy-cvesync` is Python library that can retrieve JSON files containing Common
 Vulnerabilities and Exposures (CVE) data (such as those from the [National
-Vulnerability Database (CVE)](https://nvd.nist.gov/)) and import the data into a
+Vulnerability Database (NVD)](https://nvd.nist.gov/)) and import the data into a
 MongoDB collection.
 
 ## Pre-requisites ##
