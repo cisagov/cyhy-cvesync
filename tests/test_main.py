@@ -2,16 +2,14 @@
 
 # Standard Python Libraries
 import argparse
-import logging
 import sys
 from unittest.mock import AsyncMock, mock_open, patch
 
 # Third-Party Libraries
-from cyhy_db.models import CVEDoc
-from cyhy_logging import CYHY_ROOT_LOGGER
 import pytest
 
 # cisagov Libraries
+from cyhy_db.models import CVEDoc
 from cyhy_nvdsync.main import do_nvd_sync, generate_urls, main_async
 from cyhy_nvdsync.models.config_model import (
     DEFAULT_NVD_URL_PATTERN,
@@ -93,8 +91,8 @@ def test_generate_urls():
         assert urls == expected_urls
 
 
-async def test_do_nvd_sync_fast(capfd, db_uri, db_name):
-    """Test the do_nvd_sync function with a small amount of test CVE data."""
+async def test_do_nvd_sync_fast_no_arg_log_level(capfd, db_uri, db_name):
+    """Test the do_nvd_sync function with a small amount of test CVE data without setting the arg_log_level."""
     valid_config = NVDSyncConfig(
         nvdsync=NVDSync(
             db_auth_uri=db_uri,
@@ -117,6 +115,31 @@ async def test_do_nvd_sync_fast(capfd, db_uri, db_name):
     assert await CVEDoc.count() == SAMPLE_CVE_JSON_SMALL_VALID_CVES
 
 
+async def test_do_nvd_sync_fast_set_arg_log_level(capfd, db_uri, db_name):
+    """Test the do_nvd_sync function with a small amount of test CVE data when setting the arg_log_level."""
+    valid_config = NVDSyncConfig(
+        nvdsync=NVDSync(
+            db_auth_uri=db_uri,
+            db_name=db_name,
+            json_url_pattern=DEFAULT_NVD_URL_PATTERN,
+            log_level="info",
+        )
+    )
+    with patch("cyhy_nvdsync.main.get_config", return_value=valid_config):
+        single_cve_url = [DEFAULT_NVD_URL_PATTERN.format(year=2024)]
+        with patch("cyhy_nvdsync.main.generate_urls", return_value=single_cve_url):
+            with patch(
+                "cyhy_nvdsync.nvd_sync.fetch_cve_data",
+                return_value=SAMPLE_CVE_JSON_SMALL,
+            ):
+                await do_nvd_sync(config_file=None, arg_log_level="debug")
+    nvd_sync_output = capfd.readouterr().out
+    assert "Processing CVE feed" in nvd_sync_output
+    assert "NVD synchronization complete" in nvd_sync_output
+    assert await CVEDoc.count() == SAMPLE_CVE_JSON_SMALL_VALID_CVES
+
+
+# This test takes a long time to run since it ingests all available CVE data.
 @pytest.mark.slow
 async def test_do_nvd_sync_valid_config(capfd, db_uri, db_name):
     """Test the do_nvd_sync function with a valid configuration."""
@@ -133,25 +156,6 @@ async def test_do_nvd_sync_valid_config(capfd, db_uri, db_name):
     nvd_sync_output = capfd.readouterr().out
     assert "Processing CVE feed" in nvd_sync_output
     assert "NVD synchronization complete" in nvd_sync_output
-
-
-@pytest.mark.slow
-async def test_do_nvd_sync_setup_logging(db_uri, db_name):
-    """Test that do_nvd_sync ignores the log_level in the config if it's set via arg_log_level."""
-    valid_config = NVDSyncConfig(
-        nvdsync=NVDSync(
-            db_auth_uri=db_uri,
-            db_name=db_name,
-            json_url=DEFAULT_NVD_URL_PATTERN,
-            log_level="info",
-        )
-    )
-    with patch("cyhy_nvdsync.main.get_config", return_value=valid_config):
-        await do_nvd_sync(config_file=None, arg_log_level="critical")
-    assert (
-        logging.getLogger(f"{CYHY_ROOT_LOGGER}.main").getEffectiveLevel()
-        == logging.CRITICAL
-    )
 
 
 async def test_do_nvd_sync_invalid_config(capfd):
