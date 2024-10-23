@@ -60,7 +60,7 @@ async def process_cve_json(cve_json: dict) -> Tuple[int, int]:
                 cvss_version_temp = cve["impact"]["baseMetric" + version][
                     "cvss" + version
                 ]["version"]
-            except ValueError:
+            except KeyError:
                 logger.error("CVE object: %s", cve)
                 raise ValueError("JSON does not look like valid NVD CVE data.")
 
