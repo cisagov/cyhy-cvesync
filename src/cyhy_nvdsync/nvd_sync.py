@@ -139,8 +139,7 @@ def fetch_cve_data(cve_url: str, gzipped: bool) -> dict:
 
 
 async def process_urls(
-    cve_urls: List[str],
-    cve_data_gzipped: bool,
+    cve_urls: List[str], cve_data_gzipped: bool
 ) -> Tuple[int, int, int]:
     """Process URLs containing CVE data."""
     created_cve_docs_count = 0
