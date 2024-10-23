@@ -1,4 +1,4 @@
-"""This module provides functions for fetching, validating, and synchronizing Known Exploited Vulnerabilities (KEV) data."""
+"""This module provides functions for fetching and synchronizing Common Vulnerabilities and Exposures (CVE) data."""
 
 # Standard Python Libraries
 import gzip
