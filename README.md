@@ -56,10 +56,10 @@ and then load the data into to your database.
 
 ```python
 import asyncio
-from cyhy_db import initialize_db
-from cyhy_db.models import CVEDoc
 from cyhy_cvesync import DEFAULT_CVE_URL_PATTERN
 from cyhy_cvesync.cve_sync import process_urls
+from cyhy_db import initialize_db
+from cyhy_db.models import CVEDoc
 
 async def main():
     # Initialize the CyHy database
@@ -86,12 +86,12 @@ asyncio.run(main())
 Output:
 
 ```console
-CVE documents in DB before sync: 2
-Processing CVE feed ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:16
+CVE documents in DB before sync: 20
+Processing CVE feed ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:24
 Deleting outdated CVE docs ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
-Created CVE documents: 11644
+Created CVE documents: 11624
 Updated CVE documents: 0
-Deleted CVE documents: 2
+Deleted CVE documents: 0
 CVE documents in DB after sync: 11644
 ```
 
