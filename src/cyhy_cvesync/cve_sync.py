@@ -26,7 +26,19 @@ logger = logging.getLogger(f"{CYHY_ROOT_LOGGER}.{__name__}")
 
 
 async def process_cve_json(cve_json: dict) -> Tuple[int, int]:
-    """Process the provided CVEs JSON and update the database with their contents."""
+    """
+    Process the provided CVEs JSON and update the database with their contents.
+
+    Args:
+        cve_json (dict): The JSON data containing information about CVEs.
+
+    Returns:
+        Tuple[int, int]: A tuple containing the counts of created and updated
+        CVE documents, respectively.
+
+    Raises:
+        ValueError: If the JSON CVE data is malformed or missing key fields.
+    """
     created_cve_docs_count = 0
     updated_cve_docs_count = 0
 
@@ -94,7 +106,8 @@ def fetch_cve_data(cve_url: str, gzipped: bool) -> dict:
     """
     Fetch the CVE data from the given URL.
 
-    This function retrieves Common Vulnerabilities and Exposures (CVE) JSON data from the specified URL.
+    This function retrieves Common Vulnerabilities and Exposures (CVE) JSON data
+    from the specified URL.
 
     Args:
         cve_url (str): The URL to fetch the CVE JSON data from.
@@ -105,7 +118,8 @@ def fetch_cve_data(cve_url: str, gzipped: bool) -> dict:
 
     Raises:
         urllib.error.HTTPError: If the CVE JSON cannot be retrieved.
-        ValueError: If the URL scheme is not allowed or if no data is received from the CVE URL.
+        ValueError: If the URL scheme is not allowed or if no data is received
+        from the CVE URL.
     """
     # Create a Request object so we can test the safety of the URL
     cve_request = urllib.request.Request(cve_url)
@@ -141,7 +155,21 @@ def fetch_cve_data(cve_url: str, gzipped: bool) -> dict:
 async def process_urls(
     cve_urls: List[str], cve_data_gzipped: bool
 ) -> Tuple[int, int, int]:
-    """Process URLs containing CVE data."""
+    """
+    Process URLs containing CVE data.
+
+    This function fetches CVE data from the provided URLs, processes the data,
+    and updates the database accordingly. It also deletes any outdated CVE
+    documents that were not seen during the processing of the URLs.
+
+    Args:
+        cve_urls (List[str]): A list of URLs containing CVE data.
+        cve_data_gzipped (bool): A flag indicating whether the CVE data is gzipped.
+
+    Returns:
+        Tuple[int, int, int]: A tuple containing the counts of created, updated,
+        and deleted CVE documents, respectively.
+    """
     created_cve_docs_count = 0
     deleted_cve_docs_count = 0
     updated_cve_docs_count = 0
