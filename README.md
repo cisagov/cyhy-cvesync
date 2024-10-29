@@ -37,7 +37,7 @@ Sample output (trimmed to highlight the important parts):
 
 ```console
 <snip>
-MongoDB is accessible at mongodb://mongoadmin:secret@localhost:32784 with database named "test"
+MongoDB is accessible at mongodb://mongoadmin:secret@localhost:32881 with database named "test"
 Mongo Express is accessible at http://admin:pass@localhost:8081
 
 Press Enter to stop Mongo Express and MongoDB containers...
