@@ -2,10 +2,12 @@
 
 # Standard Python Libraries
 import argparse
+import asyncio
 import sys
 from unittest.mock import AsyncMock, mock_open, patch
 
 # Third-Party Libraries
+from aiohttp import ClientSession
 import pytest
 
 # cisagov Libraries
@@ -18,10 +20,18 @@ from cyhy_cvesync.models.config_model import (
 )
 from cyhy_db.models import CVEDoc
 
-# Download sample CVE data from the default CVE URL
-SAMPLE_CVE_JSON = fetch_cve_data(
-    DEFAULT_CVE_URL_PATTERN.format(year=2024), gzipped=True
-)
+
+async def fetch_sample_cve_data(year):
+    """Fetch sample CVE data from the default CVE URL."""
+    async with ClientSession() as session:
+        return await fetch_cve_data(
+            session, DEFAULT_CVE_URL_PATTERN.format(year=year), gzipped=True
+        )
+
+
+# Download sample CVE data for a single year from the default CVE URL
+SAMPLE_CVE_JSON = asyncio.run(fetch_sample_cve_data(2024))
+
 # Create a smaller sample dictionary that includes a target number of CVEs that
 # meet our criteria
 SAMPLE_CVE_JSON_SMALL_VALID_CVES = 20
@@ -110,7 +120,6 @@ async def test_do_cve_sync_fast_no_arg_log_level(capfd, db_uri, db_name):
             ):
                 await do_cve_sync(config_file=None, arg_log_level=None)
     cve_sync_output = capfd.readouterr().out
-    assert "Processing CVE feed" in cve_sync_output
     assert "CVE synchronization complete" in cve_sync_output
     assert await CVEDoc.count() == SAMPLE_CVE_JSON_SMALL_VALID_CVES
 
@@ -134,7 +143,6 @@ async def test_do_cve_sync_fast_set_arg_log_level(capfd, db_uri, db_name):
             ):
                 await do_cve_sync(config_file=None, arg_log_level="debug")
     cve_sync_output = capfd.readouterr().out
-    assert "Processing CVE feed" in cve_sync_output
     assert "CVE synchronization complete" in cve_sync_output
     assert await CVEDoc.count() == SAMPLE_CVE_JSON_SMALL_VALID_CVES
 
@@ -149,12 +157,12 @@ async def test_do_cve_sync_valid_config(capfd, db_uri, db_name):
             db_name=db_name,
             json_url_pattern=DEFAULT_CVE_URL_PATTERN,
             log_level="info",
+            url_concurrency=20,
         )
     )
     with patch("cyhy_cvesync.main.get_config", return_value=valid_config):
         await do_cve_sync(config_file=None, arg_log_level=None)
     cve_sync_output = capfd.readouterr().out
-    assert "Processing CVE feed" in cve_sync_output
     assert "CVE synchronization complete" in cve_sync_output
 
 
