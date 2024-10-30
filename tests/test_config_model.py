@@ -27,6 +27,15 @@ def test_default_json_url_pattern():
     assert config.json_url_pattern == DEFAULT_CVE_URL_PATTERN
 
 
+def test_default_url_concurrency():
+    """Test the default URL concurrency."""
+    config = CVESync(
+        db_auth_uri="mongodb://localhost:27017",
+        db_name="test_db",
+    )
+    assert config.url_concurrency == 10
+
+
 def test_invalid_db_auth_uri():
     """Test an invalid database authentication URI."""
     with pytest.raises(ValidationError):
