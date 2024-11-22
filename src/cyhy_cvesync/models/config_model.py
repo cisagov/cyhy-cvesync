@@ -31,6 +31,10 @@ class CVESync(BaseModel):
         None,
         description="Logging level",
     )
+    url_concurrency: int = Field(
+        default=10,
+        description="Number of concurrent URL requests to fetch and process CVE data",
+    )
 
 
 class CVESyncConfig(BaseModel):

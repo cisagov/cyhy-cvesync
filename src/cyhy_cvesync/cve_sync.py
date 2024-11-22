@@ -1,6 +1,7 @@
 """This module provides functions for fetching and synchronizing Common Vulnerabilities and Exposures (CVE) data."""
 
 # Standard Python Libraries
+import asyncio
 import gzip
 from io import BytesIO
 import json
@@ -9,6 +10,7 @@ from typing import Dict, List, Tuple
 import urllib.request
 
 # Third-Party Libraries
+from aiohttp import ClientResponseError, ClientSession
 from cyhy_logging import CYHY_ROOT_LOGGER
 from rich.progress import track
 
@@ -21,6 +23,7 @@ MAX_CVE_URL_RETRIES = 10
 
 # Map to track existing CVE documents that were not updated
 cve_map: Dict[str, CVEDoc] = {}
+cve_map_lock = asyncio.Lock()
 
 logger = logging.getLogger(f"{CYHY_ROOT_LOGGER}.{__name__}")
 
@@ -45,10 +48,14 @@ async def process_cve_json(cve_json: dict) -> Tuple[int, int]:
     if cve_json.get("CVE_data_type") != "CVE":
         raise ValueError("JSON does not look like valid CVE data.")
 
-    for cve in track(
-        cve_json.get("CVE_Items", []),
-        description="Processing CVE feed",
-    ):
+    cve_items = cve_json.get("CVE_Items", [])
+
+    logger.info(
+        "Async task %d: Starting to process %d CVEs",
+        id(asyncio.current_task()),
+        len(cve_items),
+    )
+    for cve in cve_items:
         try:
             cve_id = cve["cve"]["CVE_data_meta"]["ID"]
         except KeyError:
@@ -64,7 +71,8 @@ async def process_cve_json(cve_json: dict) -> Tuple[int, int]:
         if any(k in cve["impact"] for k in ["baseMetricV2", "baseMetricV3"]):
             # Check if the CVE document already exists in the database
             global cve_map
-            cve_doc = cve_map.pop(cve_id, None)
+            async with cve_map_lock:
+                cve_doc = cve_map.pop(cve_id, None)
 
             version = "V3" if "baseMetricV3" in cve["impact"] else "V2"
             try:
@@ -98,11 +106,17 @@ async def process_cve_json(cve_json: dict) -> Tuple[int, int]:
                 await cve_doc.save()
                 logger.info("Created CVE document with id: %s", cve_id)
                 created_cve_docs_count += 1
+    logger.info(
+        "Async task %d: Created %d CVE document(s), updated %d CVE document(s)",
+        id(asyncio.current_task()),
+        created_cve_docs_count,
+        updated_cve_docs_count,
+    )
 
     return created_cve_docs_count, updated_cve_docs_count
 
 
-def fetch_cve_data(cve_url: str, gzipped: bool) -> dict:
+async def fetch_cve_data(session: ClientSession, cve_url: str, gzipped: bool) -> dict:
     """
     Fetch the CVE data from the given URL.
 
@@ -110,6 +124,7 @@ def fetch_cve_data(cve_url: str, gzipped: bool) -> dict:
     from the specified URL.
 
     Args:
+        session (ClientSession): The aiohttp client session.
         cve_url (str): The URL to fetch the CVE JSON data from.
         gzipped (bool): Whether the data is gzipped.
 
@@ -117,7 +132,7 @@ def fetch_cve_data(cve_url: str, gzipped: bool) -> dict:
         dict: The CVE JSON data.
 
     Raises:
-        urllib.error.HTTPError: If the CVE JSON cannot be retrieved.
+        aiohttp.ClientResponseError: If the response status is not 200.
         ValueError: If the URL scheme is not allowed or if no data is received
         from the CVE URL.
     """
@@ -126,21 +141,18 @@ def fetch_cve_data(cve_url: str, gzipped: bool) -> dict:
     if cve_request.type not in ALLOWED_URL_SCHEMES:
         raise ValueError("Invalid URL scheme in CVE JSON URL: %s" % cve_request.type)
 
-    # Below we disable the bandit blacklist for the urllib.request.urlopen() function
-    # since we are checking the URL scheme before using.
-
-    with urllib.request.urlopen(cve_url) as response:  # nosec B310
+    async with session.get(cve_url) as response:
         if response.status != 200:
-            raise urllib.error.HTTPError(
-                cve_url,
-                response.status,
-                "Failed to retrieve CVE data.",
-                response.headers,
-                None,
+            raise ClientResponseError(
+                headers=response.headers,
+                history=response.history,
+                message="Failed to retrieve CVE data: %s" % response.reason,
+                request_info=response.request_info,
+                status=response.status,
             )
 
         # Read the response content
-        response_content = response.read()
+        response_content = await response.read()
         if not response_content:
             raise ValueError("Empty response received from the server.")
 
@@ -153,7 +165,9 @@ def fetch_cve_data(cve_url: str, gzipped: bool) -> dict:
 
 
 async def process_urls(
-    cve_urls: List[str], cve_data_gzipped: bool
+    cve_urls: List[str],
+    cve_data_gzipped: bool,
+    concurrency: int,
 ) -> Tuple[int, int, int]:
     """
     Process URLs containing CVE data.
@@ -165,6 +179,7 @@ async def process_urls(
     Args:
         cve_urls (List[str]): A list of URLs containing CVE data.
         cve_data_gzipped (bool): A flag indicating whether the CVE data is gzipped.
+        concurrency (int): The number of concurrent URL requests to make and process.
 
     Returns:
         Tuple[int, int, int]: A tuple containing the counts of created, updated,
@@ -173,20 +188,30 @@ async def process_urls(
     created_cve_docs_count = 0
     deleted_cve_docs_count = 0
     updated_cve_docs_count = 0
+    cve_docs_count_lock = asyncio.Lock()
 
     # Fetch all existing CVE documents from the database
     global cve_map
     cve_map = {str(cve.id): cve for cve in await CVEDoc.find_all().to_list()}
 
-    for cve_url in cve_urls:
-        logging.info("Processing URL: %s", cve_url)
+    async def process_single_url(
+        semaphore: asyncio.Semaphore, session: ClientSession, cve_url: str
+    ):
+        nonlocal created_cve_docs_count, updated_cve_docs_count
+        async with semaphore:
+            logging.info("Processing URL: %s", cve_url)
+            cve_json = await fetch_cve_data(session, cve_url, cve_data_gzipped)
+            created_count, updated_count = await process_cve_json(cve_json)
+            async with cve_docs_count_lock:
+                created_cve_docs_count += created_count
+                updated_cve_docs_count += updated_count
 
-        cve_json = fetch_cve_data(cve_url, cve_data_gzipped)
-
-        # Process the CVE JSON data and update the database
-        created_count, updated_count = await process_cve_json(cve_json)
-        created_cve_docs_count += created_count
-        updated_cve_docs_count += updated_count
+    semaphore = asyncio.Semaphore(concurrency)
+    async with ClientSession() as session:
+        tasks = [
+            process_single_url(semaphore, session, cve_url) for cve_url in cve_urls
+        ]
+        await asyncio.gather(*tasks)
 
     # Delete any previously-existing CVE documents that were not seen while
     # processing the URLs

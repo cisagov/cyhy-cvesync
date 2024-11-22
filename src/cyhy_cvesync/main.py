@@ -59,7 +59,9 @@ async def do_cve_sync(
 
     # Fetch the CVE URLs and put the CVE data into the database
     created_cve_docs_count, updated_cve_docs_count, deleted_cve_docs_count = (
-        await process_urls(cve_urls, config.cvesync.json_url_gzipped)
+        await process_urls(
+            cve_urls, config.cvesync.json_url_gzipped, config.cvesync.url_concurrency
+        )
     )
 
     # Log the results

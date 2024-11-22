@@ -1,11 +1,13 @@
 """Test the cve_sync module."""
 
 # Standard Python Libraries
+import asyncio
 import json
 import os
 from unittest.mock import Mock, patch
 
 # Third-Party Libraries
+from aiohttp import ClientResponseError, ClientSession
 from motor.motor_asyncio import AsyncIOMotorClient
 import pytest
 
@@ -86,54 +88,60 @@ async def test_process_cve_json_empty_id():
         await process_cve_json(cve_json_empty_id)
 
 
-@patch("urllib.request.urlopen")
-def test_fetch_cve_data_invalid_url_scheme(mock_urlopen):
+async def test_fetch_cve_data_invalid_url_scheme():
     """Test fetching CVE data with an invalid URL scheme."""
     cve_json_url = "ftp://example.com/cve.json"
 
     with pytest.raises(ValueError, match="Invalid URL scheme in CVE JSON URL: ftp"):
-        fetch_cve_data(cve_json_url, gzipped=False)
+        async with ClientSession() as session:
+            await fetch_cve_data(session, cve_json_url, gzipped=False)
 
 
-@patch("urllib.request.urlopen")
-def test_fetch_cve_data_json_decode_error(mock_urlopen):
+@patch("aiohttp.client.ClientSession.get")
+async def test_fetch_cve_data_json_decode_error(mock_get):
     """Test fetching CVE data with a JSON decode error."""
     mock_response = Mock()
     mock_response.status = 200
-    mock_response.read.return_value = b"Invalid JSON"
-    mock_urlopen.return_value.__enter__.return_value = mock_response
+    mock_response.read.return_value = asyncio.Future()
+    mock_response.read.return_value.set_result(b"Invalid JSON")
+    mock_get.return_value.__aenter__.return_value = mock_response
 
     with pytest.raises(json.JSONDecodeError):
-        fetch_cve_data("https://example.com/cve.json", gzipped=False)
+        async with ClientSession() as session:
+            await fetch_cve_data(session, "https://example.com/cve.json", gzipped=False)
 
 
-@patch("urllib.request.urlopen")
-def test_fetch_cve_data_non_200_response(mock_urlopen):
+@patch("aiohttp.client.ClientSession.get")
+async def test_fetch_cve_data_non_200_response(mock_urlopen):
     """Test fetching CVE data with a non-200 HTTP response."""
     mock_response = Mock()
     mock_response.status = 500
-    mock_urlopen.return_value.__enter__.return_value = mock_response
+    mock_urlopen.return_value.__aenter__.return_value = mock_response
 
-    with pytest.raises(Exception, match="Failed to retrieve CVE data."):
-        fetch_cve_data("https://example.com/cve.json", gzipped=False)
+    with pytest.raises(ClientResponseError, match="Failed to retrieve CVE data."):
+        async with ClientSession() as session:
+            await fetch_cve_data(session, "https://example.com/cve.json", gzipped=False)
 
 
-@patch("urllib.request.urlopen")
-def test_fetch_cve_data_empty_response(mock_urlopen):
+@patch("aiohttp.client.ClientSession.get")
+async def test_fetch_cve_data_empty_response(mock_urlopen):
     """Test fetching CVE data with an empty HTTP response."""
     mock_response = Mock()
     mock_response.status = 200
-    mock_response.read.return_value = b""
-    mock_urlopen.return_value.__enter__.return_value = mock_response
+    mock_response.read.return_value = asyncio.Future()
+    mock_response.read.return_value.set_result(b"")
+    mock_urlopen.return_value.__aenter__.return_value = mock_response
 
     with pytest.raises(ValueError, match="Empty response received from the server."):
-        fetch_cve_data("https://example.com/cve.json", gzipped=False)
+        async with ClientSession() as session:
+            await fetch_cve_data(session, "https://example.com/cve.json", gzipped=False)
 
 
-def test_fetch_real_cve_data():
+async def test_fetch_real_cve_data():
     """Test fetching CVE data."""
     cve_url = DEFAULT_CVE_URL_PATTERN.format(year=2024)
-    cve_json = fetch_cve_data(cve_url, gzipped=True)
+    async with ClientSession() as session:
+        cve_json = await fetch_cve_data(session, cve_url, gzipped=True)
     assert "CVE_Items" in cve_json, "Expected 'CVE_Items' in CVE data"
     assert len(cve_json["CVE_Items"]) > 0, "Expected at least one CVE item in CVE data"
 
@@ -165,7 +173,7 @@ async def test_process_urls_create_cves():
     }
     with patch("cyhy_cvesync.cve_sync.fetch_cve_data", return_value=cve_json_data):
         created, updated, deleted = await process_urls(
-            ["https://example.com/cve.json"], cve_data_gzipped=False
+            ["https://example.com/cve.json"], cve_data_gzipped=False, concurrency=1
         )
         assert created == 3, "Expected 3 CVEs to be created"
         assert updated == 0, "Expected no CVEs to be updated"
@@ -199,7 +207,7 @@ async def test_process_urls_update_cves():
     }
     with patch("cyhy_cvesync.cve_sync.fetch_cve_data", return_value=cve_json_data):
         created, updated, deleted = await process_urls(
-            ["https://example.com/cve.json"], cve_data_gzipped=False
+            ["https://example.com/cve.json"], cve_data_gzipped=False, concurrency=1
         )
         assert created == 0, "Expected no CVEs to be created"
         assert updated == 2, "Expected 2 CVEs to be updated"
@@ -227,7 +235,7 @@ async def test_process_urls_delete_cves():
     }
     with patch("cyhy_cvesync.cve_sync.fetch_cve_data", return_value=cve_json_data):
         created, updated, deleted = await process_urls(
-            ["https://example.com/cve.json"], cve_data_gzipped=False
+            ["https://example.com/cve.json"], cve_data_gzipped=False, concurrency=1
         )
         assert created == 0, "Expected no CVEs to be created"
         assert updated == 0, "Expected no CVEs to be updated"
@@ -255,7 +263,7 @@ async def test_process_urls_create_update_delete_cves():
     }
     with patch("cyhy_cvesync.cve_sync.fetch_cve_data", return_value=cve_json_data):
         created, updated, deleted = await process_urls(
-            ["https://example.com/cve.json"], cve_data_gzipped=False
+            ["https://example.com/cve.json"], cve_data_gzipped=False, concurrency=1
         )
         assert created == 1, "Expected 1 CVE to be created"
         assert updated == 1, "Expected 1 CVE to be updated"

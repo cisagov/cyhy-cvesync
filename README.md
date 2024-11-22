@@ -70,7 +70,10 @@ async def main():
     print(f"CVE documents in DB before sync: {cve_count_before}")
 
     # Fetch CVE data from the default source for a single year and sync it to the database
-    created_cve_docs_count, updated_cve_docs_count, deleted_cve_docs_count = await process_urls([DEFAULT_CVE_URL_PATTERN.format(year=2024)], cve_data_gzipped=True)
+    cve_url = DEFAULT_CVE_URL_PATTERN.format(year=2024)
+    print(f"Processing CVE data from: {cve_url}...")
+    created_cve_docs_count, updated_cve_docs_count, deleted_cve_docs_count = await process_urls(
+        [cve_url], cve_data_gzipped=True, concurrency=1)
 
     print(f"Created CVE documents: {created_cve_docs_count}")
     print(f"Updated CVE documents: {updated_cve_docs_count}")
@@ -87,12 +90,12 @@ Output:
 
 ```console
 CVE documents in DB before sync: 20
-Processing CVE feed ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:24
-Deleting outdated CVE docs ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
-Created CVE documents: 11624
+Processing CVE data from: https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-2024.json.gz...
+Deleting outdated CVE docs ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Created CVE documents: 12174
 Updated CVE documents: 0
 Deleted CVE documents: 0
-CVE documents in DB after sync: 11644
+CVE documents in DB after sync: 12194
 ```
 
 ### Environment Variables ###

@@ -87,6 +87,7 @@ setup(
     py_modules=[splitext(basename(path))[0] for path in glob("src/*.py")],
     include_package_data=True,
     install_requires=[
+        "aiohttp",
         "cyhy-config @ git+https://github.com/cisagov/cyhy-config.git@v1",
         "cyhy-db @ git+https://github.com/cisagov/cyhy-db.git@v1",
         "cyhy-logging @ git+https://github.com/cisagov/cyhy-logging.git@v1",
