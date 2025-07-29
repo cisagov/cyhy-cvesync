@@ -90,7 +90,7 @@ setup(
     install_requires=[
         "aiohttp",
         "cyhy-config @ git+https://github.com/cisagov/cyhy-config.git@v1",
-        "cyhy-db @ git+https://github.com/cisagov/cyhy-db.git@v1",
+        "cyhy-db @ git+https://github.com/cisagov/cyhy-db.git@bugfix/motor-to-pymongo",
         "cyhy-logging @ git+https://github.com/cisagov/cyhy-logging.git@v1",
         "jsonschema",
         "rich",
