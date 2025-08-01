@@ -44,6 +44,56 @@ async def test_process_cve_json_invalid_cve_data_type():
         await process_cve_json({"CVE_data_type": "INVALID", "CVE_Items": []})
 
 
+async def test_process_cve_json_non_dict():
+    """Test processing non-dictionary CVE data."""
+    with pytest.raises(ValueError, match="CVE data must be a dictionary"):
+        await process_cve_json("not a dict")
+
+
+async def test_process_cve_json_invalid_cve_items():
+    """Test processing CVE data with invalid CVE_Items."""
+    with pytest.raises(ValueError, match="CVE_Items must be a list"):
+        await process_cve_json({"CVE_data_type": "CVE", "CVE_Items": "not a list"})
+
+
+async def test_process_cve_json_invalid_cvss_score():
+    """Test processing CVE with invalid CVSS score."""
+    cve_json_invalid_score = {
+        "CVE_data_type": "CVE",
+        "CVE_Items": [
+            {
+                "cve": {"CVE_data_meta": {"ID": "CVE-2023-1234"}},
+                "impact": {
+                    "baseMetricV3": {"cvssV3": {"baseScore": "not_a_number", "version": "3.1"}}
+                },
+            }
+        ],
+    }
+    # Should not raise exception but skip the invalid CVE
+    created, updated = await process_cve_json(cve_json_invalid_score)
+    assert created == 0
+    assert updated == 0
+
+
+async def test_process_cve_json_cvss_score_out_of_range():
+    """Test processing CVE with CVSS score out of range."""
+    cve_json_out_of_range = {
+        "CVE_data_type": "CVE",
+        "CVE_Items": [
+            {
+                "cve": {"CVE_data_meta": {"ID": "CVE-2023-1234"}},
+                "impact": {
+                    "baseMetricV3": {"cvssV3": {"baseScore": 15.0, "version": "3.1"}}  # Invalid: > 10.0
+                },
+            }
+        ],
+    }
+    # Should not raise exception but skip the invalid CVE
+    created, updated = await process_cve_json(cve_json_out_of_range)
+    assert created == 0
+    assert updated == 0
+
+
 async def test_process_cve_json_malformed_1():
     """Test processing malformed CVE JSON data."""
     with pytest.raises(ValueError, match="JSON does not look like valid CVE data."):
