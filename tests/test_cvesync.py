@@ -73,24 +73,27 @@ async def test_process_cve_json_malformed_2():
         )
 
 
-async def test_process_cve_json_no_primary_metrics_type():
+async def test_process_cve_json_no_primary_metrics_type(caplog):
     """Test processing malformed CVE JSON data."""
-    with pytest.raises(ValueError, match="No Primary CVSS metric found."):
-        await process_cve_json(
-            {
-                "format": "NVD_CVE",
-                "vulnerabilities": [
-                    {
-                        "cve": {
-                            "id": "TEST",
-                            "metrics": {
-                                "cvssMetricV30": [{"type": "INVALID", "cvssData": {}}]
-                            },
-                        }
+    cves_created, cves_updated = await process_cve_json(
+        {
+            "format": "NVD_CVE",
+            "vulnerabilities": [
+                {
+                    "cve": {
+                        "id": "TEST",
+                        "metrics": {
+                            "cvssMetricV30": [{"type": "INVALID", "cvssData": {}}]
+                        },
                     }
-                ],
-            }
-        )
+                }
+            ],
+        }
+    )
+    assert cves_created == 0, "Expected no CVEs to be created"
+    assert cves_updated == 0, "Expected no CVEs to be updated"
+    cve_sync_output = caplog.text
+    assert "Skipping TEST; no Primary CVSS metric found." in cve_sync_output
 
 
 async def test_process_cve_json_empty_id():

@@ -95,8 +95,8 @@ async def process_cve_json(cve_json: dict) -> Tuple[int, int]:
                         cvss_version_temp = metric["cvssData"]["version"]
                         break
                 else:
-                    logger.error("CVE object: %s", cve)
-                    raise ValueError("No Primary CVSS metric found.")
+                    logger.warning("Skipping %s; no Primary CVSS metric found.", cve_id)
+                    continue
             except KeyError:
                 logger.error("CVE object: %s", cve)
                 raise ValueError("JSON does not look like valid CVE data.")
