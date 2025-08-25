@@ -45,10 +45,10 @@ async def process_cve_json(cve_json: dict) -> Tuple[int, int]:
     created_cve_docs_count = 0
     updated_cve_docs_count = 0
 
-    if cve_json.get("CVE_data_type") != "CVE":
+    if cve_json.get("format") != "NVD_CVE":
         raise ValueError("JSON does not look like valid CVE data.")
 
-    cve_items = cve_json.get("CVE_Items", [])
+    cve_items = cve_json.get("vulnerabilities", [])
 
     logger.info(
         "Async task %d: Starting to process %d CVEs",
@@ -57,7 +57,7 @@ async def process_cve_json(cve_json: dict) -> Tuple[int, int]:
     )
     for cve in cve_items:
         try:
-            cve_id = cve["cve"]["CVE_data_meta"]["ID"]
+            cve_id = cve["cve"]["id"]
         except KeyError:
             # JSON might be malformed, so we'll log what the CVE object looks like
             # and then raise an error
@@ -68,20 +68,35 @@ async def process_cve_json(cve_json: dict) -> Tuple[int, int]:
             raise ValueError("CVE ID is empty.")
 
         # Only process CVEs that have CVSS V2 or V3 data
-        if any(k in cve["impact"] for k in ["baseMetricV2", "baseMetricV3"]):
+        if any(
+            k in cve["cve"].get("metrics", {})
+            for k in [
+                "cvssMetricV2",
+                "cvssMetricV30",
+                "cvssMetricV31",
+            ]
+        ):
             # Check if the CVE document already exists in the database
             global cve_map
             async with cve_map_lock:
                 cve_doc = cve_map.pop(cve_id, None)
 
-            version = "V3" if "baseMetricV3" in cve["impact"] else "V2"
+            # Determine newest CVSS metrics version in the CVE data
+            metrics_version = None
+            for v in ["cvssMetricV31", "cvssMetricV30", "cvssMetricV2"]:
+                if v in cve["cve"]["metrics"]:
+                    metrics_version = v
+                    break
+
             try:
-                cvss_base_score = cve["impact"]["baseMetric" + version][
-                    "cvss" + version
-                ]["baseScore"]
-                cvss_version_temp = cve["impact"]["baseMetric" + version][
-                    "cvss" + version
-                ]["version"]
+                for metric in cve["cve"]["metrics"][metrics_version]:
+                    if metric["type"] == "Primary":
+                        cvss_base_score = metric["cvssData"]["baseScore"]
+                        cvss_version_temp = metric["cvssData"]["version"]
+                        break
+                else:
+                    logger.error("CVE object: %s", cve)
+                    raise ValueError("No Primary CVSS metric found.")
             except KeyError:
                 logger.error("CVE object: %s", cve)
                 raise ValueError("JSON does not look like valid CVE data.")
