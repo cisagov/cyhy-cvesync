@@ -37,14 +37,21 @@ SAMPLE_CVE_JSON = asyncio.run(fetch_sample_cve_data(2024))
 SAMPLE_CVE_JSON_SMALL_VALID_CVES = 20
 count = 0
 hits = 0
-for cve in SAMPLE_CVE_JSON["CVE_Items"]:
+for cve in SAMPLE_CVE_JSON["vulnerabilities"]:
     count += 1
-    if any(k in cve["impact"] for k in ["baseMetricV2", "baseMetricV3"]):
+    if any(
+        k in cve["cve"].get("metrics", {})
+        for k in [
+            "cvssMetricV2",
+            "cvssMetricV30",
+            "cvssMetricV31",
+        ]
+    ):
         hits += 1
     if hits == SAMPLE_CVE_JSON_SMALL_VALID_CVES:
         break
 SAMPLE_CVE_JSON_SMALL = SAMPLE_CVE_JSON.copy()
-SAMPLE_CVE_JSON_SMALL["CVE_Items"] = SAMPLE_CVE_JSON["CVE_Items"][:count]
+SAMPLE_CVE_JSON_SMALL["vulnerabilities"] = SAMPLE_CVE_JSON["vulnerabilities"][:count]
 
 
 async def test_main_async_no_args():

@@ -38,10 +38,10 @@ async def test_connection_motor(db_uri, db_name):
     assert server_info["ok"] == 1.0, "Direct database ping failed"
 
 
-async def test_process_cve_json_invalid_cve_data_type():
+async def test_process_cve_json_invalid_format():
     """Test processing invalid CVE JSON data."""
     with pytest.raises(ValueError, match="JSON does not look like valid CVE data."):
-        await process_cve_json({"CVE_data_type": "INVALID", "CVE_Items": []})
+        await process_cve_json({"format": "INVALID", "vulnerabilities": []})
 
 
 async def test_process_cve_json_malformed_1():
@@ -49,8 +49,8 @@ async def test_process_cve_json_malformed_1():
     with pytest.raises(ValueError, match="JSON does not look like valid CVE data."):
         await process_cve_json(
             {
-                "CVE_data_type": "CVE",
-                "CVE_Items": [{"cve": {"CVE_data_meta": {"INVALID": "FOOBAR"}}}],
+                "format": "NVD_CVE",
+                "vulnerabilities": [{"cve": {"metrics": {"INVALID": "FOOBAR"}}}],
             }
         )
 
@@ -60,11 +60,33 @@ async def test_process_cve_json_malformed_2():
     with pytest.raises(ValueError, match="JSON does not look like valid CVE data."):
         await process_cve_json(
             {
-                "CVE_data_type": "CVE",
-                "CVE_Items": [
+                "format": "NVD_CVE",
+                "vulnerabilities": [
                     {
-                        "cve": {"CVE_data_meta": {"ID": "TEST"}},
-                        "impact": {"baseMetricV3": {"cvssV3": {}}},
+                        "cve": {
+                            "id": "TEST",
+                            "metrics": {"cvssMetricV30": [{"cvssData": {}}]},
+                        }
+                    }
+                ],
+            }
+        )
+
+
+async def test_process_cve_json_no_primary_metrics_type():
+    """Test processing malformed CVE JSON data."""
+    with pytest.raises(ValueError, match="No Primary CVSS metric found."):
+        await process_cve_json(
+            {
+                "format": "NVD_CVE",
+                "vulnerabilities": [
+                    {
+                        "cve": {
+                            "id": "TEST",
+                            "metrics": {
+                                "cvssMetricV30": [{"type": "INVALID", "cvssData": {}}]
+                            },
+                        }
                     }
                 ],
             }
@@ -74,12 +96,12 @@ async def test_process_cve_json_malformed_2():
 async def test_process_cve_json_empty_id():
     """Test processing CVE JSON data with an empty CVE ID."""
     cve_json_empty_id = {
-        "CVE_data_type": "CVE",
-        "CVE_Items": [
+        "format": "NVD_CVE",
+        "vulnerabilities": [
             {
-                "cve": {"CVE_data_meta": {"ID": ""}},
-                "impact": {
-                    "baseMetricV3": {"cvssV3": {"baseScore": 9.8, "version": "3.1"}}
+                "cve": {"id": ""},
+                "metrics": {
+                    "baseMetricV31": {"cvssData": {"baseScore": 9.8, "version": "3.1"}}
                 },
             }
         ],
@@ -142,32 +164,55 @@ async def test_fetch_real_cve_data():
     cve_url = DEFAULT_CVE_URL_PATTERN.format(year=2024)
     async with ClientSession() as session:
         cve_json = await fetch_cve_data(session, cve_url, gzipped=True)
-    assert "CVE_Items" in cve_json, "Expected 'CVE_Items' in CVE data"
-    assert len(cve_json["CVE_Items"]) > 0, "Expected at least one CVE item in CVE data"
+    assert "vulnerabilities" in cve_json, "Expected 'vulnerabilities' in CVE data"
+    assert (
+        len(cve_json["vulnerabilities"]) > 0
+    ), "Expected at least one CVE item in CVE data"
 
 
 async def test_process_urls_create_cves():
     """Test processing URLs where new CVEs are created."""
     cve_json_data = {
-        "CVE_data_type": "CVE",
-        "CVE_Items": [
+        "format": "NVD_CVE",
+        "vulnerabilities": [
             {
-                "cve": {"CVE_data_meta": {"ID": "CVE-TEST-1"}},
-                "impact": {
-                    "baseMetricV3": {"cvssV3": {"baseScore": 9.8, "version": "3.1"}}
-                },
+                "cve": {
+                    "id": "CVE-TEST-1",
+                    "metrics": {
+                        "cvssMetricV2": [
+                            {
+                                "type": "Primary",
+                                "cvssData": {"baseScore": 9.8, "version": "2.0"},
+                            }
+                        ]
+                    },
+                }
             },
             {
-                "cve": {"CVE_data_meta": {"ID": "CVE-TEST-2"}},
-                "impact": {
-                    "baseMetricV3": {"cvssV3": {"baseScore": 8.5, "version": "3.1"}}
-                },
+                "cve": {
+                    "id": "CVE-TEST-2",
+                    "metrics": {
+                        "cvssMetricV30": [
+                            {
+                                "type": "Primary",
+                                "cvssData": {"baseScore": 8.5, "version": "3.0"},
+                            }
+                        ]
+                    },
+                }
             },
             {
-                "cve": {"CVE_data_meta": {"ID": "CVE-TEST-3"}},
-                "impact": {
-                    "baseMetricV3": {"cvssV3": {"baseScore": 4.0, "version": "3.1"}}
-                },
+                "cve": {
+                    "id": "CVE-TEST-3",
+                    "metrics": {
+                        "cvssMetricV31": [
+                            {
+                                "type": "Primary",
+                                "cvssData": {"baseScore": 4.0, "version": "3.1"},
+                            }
+                        ]
+                    },
+                }
             },
         ],
     }
@@ -183,25 +228,46 @@ async def test_process_urls_create_cves():
 async def test_process_urls_update_cves():
     """Test processing URLs where CVEs are updated."""
     cve_json_data = {
-        "CVE_data_type": "CVE",
-        "CVE_Items": [
+        "format": "NVD_CVE",
+        "vulnerabilities": [
             {
-                "cve": {"CVE_data_meta": {"ID": "CVE-TEST-1"}},
-                "impact": {
-                    "baseMetricV3": {"cvssV3": {"baseScore": 9.1, "version": "3.1"}}
-                },
+                "cve": {
+                    "id": "CVE-TEST-1",
+                    "metrics": {
+                        "cvssMetricV2": [
+                            {
+                                "type": "Primary",
+                                "cvssData": {"baseScore": 9.1, "version": "2.0"},
+                            }
+                        ]
+                    },
+                }
             },
             {
-                "cve": {"CVE_data_meta": {"ID": "CVE-TEST-2"}},
-                "impact": {
-                    "baseMetricV3": {"cvssV3": {"baseScore": 8.5, "version": "3.1"}}
-                },
+                "cve": {
+                    "id": "CVE-TEST-2",
+                    "metrics": {
+                        "cvssMetricV30": [
+                            {
+                                "type": "Primary",
+                                "cvssData": {"baseScore": 8.5, "version": "3.0"},
+                            }
+                        ]
+                    },
+                }
             },
             {
-                "cve": {"CVE_data_meta": {"ID": "CVE-TEST-3"}},
-                "impact": {
-                    "baseMetricV3": {"cvssV3": {"baseScore": 7.2, "version": "3.1"}}
-                },
+                "cve": {
+                    "id": "CVE-TEST-3",
+                    "metrics": {
+                        "cvssMetricV31": [
+                            {
+                                "type": "Primary",
+                                "cvssData": {"baseScore": 7.2, "version": "3.1"},
+                            }
+                        ]
+                    },
+                }
             },
         ],
     }
@@ -217,19 +283,33 @@ async def test_process_urls_update_cves():
 async def test_process_urls_delete_cves():
     """Test processing URLs where CVEs are deleted."""
     cve_json_data = {
-        "CVE_data_type": "CVE",
-        "CVE_Items": [
+        "format": "NVD_CVE",
+        "vulnerabilities": [
             {
-                "cve": {"CVE_data_meta": {"ID": "CVE-TEST-1"}},
-                "impact": {
-                    "baseMetricV3": {"cvssV3": {"baseScore": 9.1, "version": "3.1"}}
-                },
+                "cve": {
+                    "id": "CVE-TEST-1",
+                    "metrics": {
+                        "cvssMetricV2": [
+                            {
+                                "type": "Primary",
+                                "cvssData": {"baseScore": 9.1, "version": "2.0"},
+                            }
+                        ]
+                    },
+                }
             },
             {
-                "cve": {"CVE_data_meta": {"ID": "CVE-TEST-3"}},
-                "impact": {
-                    "baseMetricV3": {"cvssV3": {"baseScore": 7.2, "version": "3.1"}}
-                },
+                "cve": {
+                    "id": "CVE-TEST-3",
+                    "metrics": {
+                        "cvssMetricV31": [
+                            {
+                                "type": "Primary",
+                                "cvssData": {"baseScore": 7.2, "version": "3.1"},
+                            }
+                        ]
+                    },
+                }
             },
         ],
     }
@@ -245,19 +325,33 @@ async def test_process_urls_delete_cves():
 async def test_process_urls_create_update_delete_cves():
     """Test processing URLs where CVEs are created, updated, and deleted."""
     cve_json_data = {
-        "CVE_data_type": "CVE",
-        "CVE_Items": [
+        "format": "NVD_CVE",
+        "vulnerabilities": [
             {
-                "cve": {"CVE_data_meta": {"ID": "CVE-TEST-1"}},
-                "impact": {
-                    "baseMetricV3": {"cvssV3": {"baseScore": 9.3, "version": "3.1"}}
-                },
+                "cve": {
+                    "id": "CVE-TEST-1",
+                    "metrics": {
+                        "cvssMetricV2": [
+                            {
+                                "type": "Primary",
+                                "cvssData": {"baseScore": 9.3, "version": "2.0"},
+                            }
+                        ]
+                    },
+                }
             },
             {
-                "cve": {"CVE_data_meta": {"ID": "CVE-TEST-4"}},
-                "impact": {
-                    "baseMetricV3": {"cvssV3": {"baseScore": 5.5, "version": "3.1"}}
-                },
+                "cve": {
+                    "id": "CVE-TEST-4",
+                    "metrics": {
+                        "cvssMetricV31": [
+                            {
+                                "type": "Primary",
+                                "cvssData": {"baseScore": 5.5, "version": "3.1"},
+                            }
+                        ]
+                    },
+                }
             },
         ],
     }
