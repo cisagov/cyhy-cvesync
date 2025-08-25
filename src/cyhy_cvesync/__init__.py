@@ -8,7 +8,7 @@
 #   used to get version information about this Python package.
 
 DEFAULT_CVE_URL_PATTERN = (
-    "https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-{year}.json.gz"
+    "https://nvd.nist.gov/feeds/json/cve/2.0/nvdcve-2.0-{year}.json.gz"
 )
 
 from ._version import __version__  # noqa: F401, E402
