@@ -93,7 +93,54 @@ async def test_process_cve_json_no_primary_metrics_type(caplog):
     assert cves_created == 0, "Expected no CVEs to be created"
     assert cves_updated == 0, "Expected no CVEs to be updated"
     cve_sync_output = caplog.text
-    assert "Skipping TEST; no Primary CVSS metric found." in cve_sync_output
+    assert "Skipping TEST; no Primary CVSS v2 or v3 metric found." in cve_sync_output
+
+
+async def test_process_cve_json_primary_in_v2(db_uri, db_name):
+    """Test processing CVE JSON data where the primary CVSS metric is v2."""
+    cve_json_v2 = {
+        "format": "NVD_CVE",
+        "vulnerabilities": [
+            {
+                "cve": {
+                    "id": "TEST-V2",
+                    "metrics": {
+                        "cvssMetricV31": [
+                            {
+                                "type": "Secondary",
+                                "cvssData": {"baseScore": 3.1, "version": "3.1"},
+                            }
+                        ],
+                        "cvssMetricV30": [
+                            {
+                                "type": "Secondary",
+                                "cvssData": {"baseScore": 3.0, "version": "3.0"},
+                            }
+                        ],
+                        "cvssMetricV2": [
+                            {
+                                "type": "Primary",
+                                "cvssData": {"baseScore": 2.0, "version": "2.0"},
+                            }
+                        ],
+                    },
+                }
+            }
+        ],
+    }
+    cves_created, cves_updated = await process_cve_json(cve_json_v2)
+    assert cves_created == 1, "Expected 1 CVE to be created"
+    assert cves_updated == 0, "Expected no CVEs to be updated"
+
+    client = AsyncMongoClient(db_uri)
+    db = client[db_name]
+    cve_doc = await db.cves.find_one({"_id": "TEST-V2"})
+    assert cve_doc is not None, "Expected CVE document to be found in the database"
+    assert cve_doc["cvss_score"] == 2.0, "Expected CVSS score to be 2.0"
+    assert cve_doc["cvss_version"] == "2.0", "Expected CVSS version to be 2.0"
+
+    # Delete the test CVE document
+    await db.cves.delete_one({"_id": "TEST-V2"})
 
 
 async def test_process_cve_json_empty_id():
