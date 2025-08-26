@@ -73,7 +73,11 @@ async def test_process_cve_json_malformed_2():
                     {
                         "cve": {
                             "id": "TEST",
-                            "metrics": {"cvssMetricV30": [{"type": "Primary"}]},
+                            "metrics": {
+                                "cvssMetricV30": [
+                                    {"source": DEFAULT_CVE_AUTHORITATIVE_SOURCE}
+                                ]
+                            },
                         }
                     }
                 ],
@@ -82,7 +86,7 @@ async def test_process_cve_json_malformed_2():
         )
 
 
-async def test_process_cve_json_no_primary_metrics_type(caplog):
+async def test_process_cve_json_no_authoritative_metrics(caplog):
     """Test processing malformed CVE JSON data."""
     cves_created, cves_updated = await process_cve_json(
         {
@@ -92,7 +96,7 @@ async def test_process_cve_json_no_primary_metrics_type(caplog):
                     "cve": {
                         "id": "TEST",
                         "metrics": {
-                            "cvssMetricV30": [{"type": "INVALID", "cvssData": {}}]
+                            "cvssMetricV30": [{"source": "nobody@example.gov"}]
                         },
                     }
                 }
@@ -103,11 +107,112 @@ async def test_process_cve_json_no_primary_metrics_type(caplog):
     assert cves_created == 0, "Expected no CVEs to be created"
     assert cves_updated == 0, "Expected no CVEs to be updated"
     cve_sync_output = caplog.text
-    assert "Skipping TEST; no Primary CVSS v2 or v3 metric found." in cve_sync_output
+    assert (
+        f"Skipping TEST; no CVSS v2 or v3 metric found from authoritative source ({DEFAULT_CVE_AUTHORITATIVE_SOURCE})."
+        in cve_sync_output
+    )
 
 
-async def test_process_cve_json_primary_in_v2(db_uri, db_name):
-    """Test processing CVE JSON data where the primary CVSS metric is v2."""
+async def test_process_cve_json_auth_source_in_v31(db_uri, db_name):
+    """Test processing CVE JSON data where the authoritative CVSS metric is v3.1."""
+    cve_json_v31 = {
+        "format": "NVD_CVE",
+        "vulnerabilities": [
+            {
+                "cve": {
+                    "id": "TEST-V31",
+                    "metrics": {
+                        "cvssMetricV31": [
+                            {
+                                "source": DEFAULT_CVE_AUTHORITATIVE_SOURCE,
+                                "cvssData": {"baseScore": 3.1, "version": "3.1"},
+                            }
+                        ],
+                        "cvssMetricV30": [
+                            {
+                                "source": "nobody@example.gov",
+                                "cvssData": {"baseScore": 3.0, "version": "3.0"},
+                            }
+                        ],
+                        "cvssMetricV2": [
+                            {
+                                "source": "nobody@example.gov",
+                                "cvssData": {"baseScore": 2.0, "version": "2.0"},
+                            }
+                        ],
+                    },
+                }
+            }
+        ],
+    }
+    cves_created, cves_updated = await process_cve_json(
+        cve_json_v31, DEFAULT_CVE_AUTHORITATIVE_SOURCE
+    )
+    assert cves_created == 1, "Expected 1 CVE to be created"
+    assert cves_updated == 0, "Expected no CVEs to be updated"
+
+    client = AsyncMongoClient(db_uri)
+    db = client[db_name]
+    cve_doc = await db.cves.find_one({"_id": "TEST-V31"})
+    assert cve_doc is not None, "Expected CVE document to be found in the database"
+    assert cve_doc["cvss_score"] == 3.1, "Expected CVSS score to be 3.1"
+    assert cve_doc["cvss_version"] == "3.1", "Expected CVSS version to be 3.1"
+
+    # Delete the test CVE document
+    await db.cves.delete_one({"_id": "TEST-V31"})
+
+
+async def test_process_cve_json_auth_source_in_v30(db_uri, db_name):
+    """Test processing CVE JSON data where the authoritative CVSS metric is v3.0."""
+    cve_json_v30 = {
+        "format": "NVD_CVE",
+        "vulnerabilities": [
+            {
+                "cve": {
+                    "id": "TEST-V30",
+                    "metrics": {
+                        "cvssMetricV31": [
+                            {
+                                "source": "nobody@example.gov",
+                                "cvssData": {"baseScore": 3.1, "version": "3.1"},
+                            }
+                        ],
+                        "cvssMetricV30": [
+                            {
+                                "source": DEFAULT_CVE_AUTHORITATIVE_SOURCE,
+                                "cvssData": {"baseScore": 3.0, "version": "3.0"},
+                            }
+                        ],
+                        "cvssMetricV2": [
+                            {
+                                "source": "nobody@example.gov",
+                                "cvssData": {"baseScore": 2.0, "version": "2.0"},
+                            }
+                        ],
+                    },
+                }
+            }
+        ],
+    }
+    cves_created, cves_updated = await process_cve_json(
+        cve_json_v30, DEFAULT_CVE_AUTHORITATIVE_SOURCE
+    )
+    assert cves_created == 1, "Expected 1 CVE to be created"
+    assert cves_updated == 0, "Expected no CVEs to be updated"
+
+    client = AsyncMongoClient(db_uri)
+    db = client[db_name]
+    cve_doc = await db.cves.find_one({"_id": "TEST-V30"})
+    assert cve_doc is not None, "Expected CVE document to be found in the database"
+    assert cve_doc["cvss_score"] == 3.0, "Expected CVSS score to be 3.0"
+    assert cve_doc["cvss_version"] == "3.0", "Expected CVSS version to be 3.0"
+
+    # Delete the test CVE document
+    await db.cves.delete_one({"_id": "TEST-V30"})
+
+
+async def test_process_cve_json_auth_source_in_v2(db_uri, db_name):
+    """Test processing CVE JSON data where the authoritative CVSS metric is v2."""
     cve_json_v2 = {
         "format": "NVD_CVE",
         "vulnerabilities": [
@@ -117,19 +222,19 @@ async def test_process_cve_json_primary_in_v2(db_uri, db_name):
                     "metrics": {
                         "cvssMetricV31": [
                             {
-                                "type": "Secondary",
+                                "source": "nobody@example.gov",
                                 "cvssData": {"baseScore": 3.1, "version": "3.1"},
                             }
                         ],
                         "cvssMetricV30": [
                             {
-                                "type": "Secondary",
+                                "source": "nobody@example.gov",
                                 "cvssData": {"baseScore": 3.0, "version": "3.0"},
                             }
                         ],
                         "cvssMetricV2": [
                             {
-                                "type": "Primary",
+                                "source": DEFAULT_CVE_AUTHORITATIVE_SOURCE,
                                 "cvssData": {"baseScore": 2.0, "version": "2.0"},
                             }
                         ],
@@ -247,7 +352,7 @@ async def test_process_urls_create_cves():
                     "metrics": {
                         "cvssMetricV2": [
                             {
-                                "type": "Primary",
+                                "source": DEFAULT_CVE_AUTHORITATIVE_SOURCE,
                                 "cvssData": {"baseScore": 9.8, "version": "2.0"},
                             }
                         ]
@@ -260,7 +365,7 @@ async def test_process_urls_create_cves():
                     "metrics": {
                         "cvssMetricV30": [
                             {
-                                "type": "Primary",
+                                "source": DEFAULT_CVE_AUTHORITATIVE_SOURCE,
                                 "cvssData": {"baseScore": 8.5, "version": "3.0"},
                             }
                         ]
@@ -273,7 +378,7 @@ async def test_process_urls_create_cves():
                     "metrics": {
                         "cvssMetricV31": [
                             {
-                                "type": "Primary",
+                                "source": DEFAULT_CVE_AUTHORITATIVE_SOURCE,
                                 "cvssData": {"baseScore": 4.0, "version": "3.1"},
                             }
                         ]
@@ -305,7 +410,7 @@ async def test_process_urls_update_cves():
                     "metrics": {
                         "cvssMetricV2": [
                             {
-                                "type": "Primary",
+                                "source": DEFAULT_CVE_AUTHORITATIVE_SOURCE,
                                 "cvssData": {"baseScore": 9.1, "version": "2.0"},
                             }
                         ]
@@ -318,7 +423,7 @@ async def test_process_urls_update_cves():
                     "metrics": {
                         "cvssMetricV30": [
                             {
-                                "type": "Primary",
+                                "source": DEFAULT_CVE_AUTHORITATIVE_SOURCE,
                                 "cvssData": {"baseScore": 8.5, "version": "3.0"},
                             }
                         ]
@@ -331,7 +436,7 @@ async def test_process_urls_update_cves():
                     "metrics": {
                         "cvssMetricV31": [
                             {
-                                "type": "Primary",
+                                "source": DEFAULT_CVE_AUTHORITATIVE_SOURCE,
                                 "cvssData": {"baseScore": 7.2, "version": "3.1"},
                             }
                         ]
@@ -363,7 +468,7 @@ async def test_process_urls_delete_cves():
                     "metrics": {
                         "cvssMetricV2": [
                             {
-                                "type": "Primary",
+                                "source": DEFAULT_CVE_AUTHORITATIVE_SOURCE,
                                 "cvssData": {"baseScore": 9.1, "version": "2.0"},
                             }
                         ]
@@ -376,7 +481,7 @@ async def test_process_urls_delete_cves():
                     "metrics": {
                         "cvssMetricV31": [
                             {
-                                "type": "Primary",
+                                "source": DEFAULT_CVE_AUTHORITATIVE_SOURCE,
                                 "cvssData": {"baseScore": 7.2, "version": "3.1"},
                             }
                         ]
@@ -408,7 +513,7 @@ async def test_process_urls_create_update_delete_cves():
                     "metrics": {
                         "cvssMetricV2": [
                             {
-                                "type": "Primary",
+                                "source": DEFAULT_CVE_AUTHORITATIVE_SOURCE,
                                 "cvssData": {"baseScore": 9.3, "version": "2.0"},
                             }
                         ]
@@ -421,7 +526,7 @@ async def test_process_urls_create_update_delete_cves():
                     "metrics": {
                         "cvssMetricV31": [
                             {
-                                "type": "Primary",
+                                "source": DEFAULT_CVE_AUTHORITATIVE_SOURCE,
                                 "cvssData": {"baseScore": 5.5, "version": "3.1"},
                             }
                         ]
