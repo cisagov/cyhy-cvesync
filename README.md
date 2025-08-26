@@ -56,7 +56,7 @@ and then load the data into to your database.
 
 ```python
 import asyncio
-from cyhy_cvesync import DEFAULT_CVE_URL_PATTERN
+from cyhy_cvesync import DEFAULT_CVE_AUTHORITATIVE_SOURCE, DEFAULT_CVE_URL_PATTERN
 from cyhy_cvesync.cve_sync import process_urls
 from cyhy_db import initialize_db
 from cyhy_db.models import CVEDoc
@@ -73,7 +73,7 @@ async def main():
     cve_url = DEFAULT_CVE_URL_PATTERN.format(year=2024)
     print(f"Processing CVE data from: {cve_url}...")
     created_cve_docs_count, updated_cve_docs_count, deleted_cve_docs_count = await process_urls(
-        [cve_url], cve_data_gzipped=True, concurrency=1)
+        [cve_url], cve_data_gzipped=True, concurrency=1,cve_authoritative_source=DEFAULT_CVE_AUTHORITATIVE_SOURCE)
 
     print(f"Created CVE documents: {created_cve_docs_count}")
     print(f"Updated CVE documents: {updated_cve_docs_count}")
@@ -90,12 +90,12 @@ Output:
 
 ```console
 CVE documents in DB before sync: 20
-Processing CVE data from: https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-2024.json.gz...
+Processing CVE data from: https://nvd.nist.gov/feeds/json/cve/2.0/nvdcve-2.0-2024.json.gz...
 Deleting outdated CVE docs ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Created CVE documents: 12174
+Created CVE documents: 18272
 Updated CVE documents: 0
 Deleted CVE documents: 0
-CVE documents in DB after sync: 12194
+CVE documents in DB after sync: 18272
 ```
 
 ### Environment Variables ###
