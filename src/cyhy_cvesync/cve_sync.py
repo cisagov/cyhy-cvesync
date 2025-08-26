@@ -100,7 +100,7 @@ async def process_cve_json(
                         break
 
                 if cvss_base_score is None or cvss_version_temp is None:
-                    logger.warning(
+                    logger.debug(
                         "Skipping %s; no CVSS v2 or v3 metric found from authoritative source (%s).",
                         cve_id,
                         cve_authoritative_source,
