@@ -28,12 +28,15 @@ cve_map_lock = asyncio.Lock()
 logger = logging.getLogger(f"{CYHY_ROOT_LOGGER}.{__name__}")
 
 
-async def process_cve_json(cve_json: dict) -> Tuple[int, int]:
+async def process_cve_json(
+    cve_json: dict, cve_authoritative_source: str
+) -> Tuple[int, int]:
     """
     Process the provided CVEs JSON and update the database with their contents.
 
     Args:
         cve_json (dict): The JSON data containing information about CVEs.
+        cve_authoritative_source (str): The authoritative source for CVE data.
 
     Returns:
         Tuple[int, int]: A tuple containing the counts of created and updated
@@ -185,6 +188,7 @@ async def process_urls(
     cve_urls: List[str],
     cve_data_gzipped: bool,
     concurrency: int,
+    cve_authoritative_source: str,
 ) -> Tuple[int, int, int]:
     """
     Process URLs containing CVE data.
@@ -197,6 +201,7 @@ async def process_urls(
         cve_urls (List[str]): A list of URLs containing CVE data.
         cve_data_gzipped (bool): A flag indicating whether the CVE data is gzipped.
         concurrency (int): The number of concurrent URL requests to make and process.
+        cve_authoritative_source (str): The authoritative source for CVE data.
 
     Returns:
         Tuple[int, int, int]: A tuple containing the counts of created, updated,
@@ -218,7 +223,9 @@ async def process_urls(
         async with semaphore:
             logging.info("Processing URL: %s", cve_url)
             cve_json = await fetch_cve_data(session, cve_url, cve_data_gzipped)
-            created_count, updated_count = await process_cve_json(cve_json)
+            created_count, updated_count = await process_cve_json(
+                cve_json, cve_authoritative_source
+            )
             async with cve_docs_count_lock:
                 created_cve_docs_count += created_count
                 updated_cve_docs_count += updated_count

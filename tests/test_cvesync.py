@@ -12,7 +12,11 @@ from pymongo import AsyncMongoClient
 import pytest
 
 # cisagov Libraries
-from cyhy_cvesync import DEFAULT_CVE_URL_PATTERN, __version__
+from cyhy_cvesync import (
+    DEFAULT_CVE_AUTHORITATIVE_SOURCE,
+    DEFAULT_CVE_URL_PATTERN,
+    __version__,
+)
 from cyhy_cvesync.cve_sync import fetch_cve_data, process_cve_json, process_urls
 
 # define sources of version strings
@@ -41,7 +45,10 @@ async def test_connection_motor(db_uri, db_name):
 async def test_process_cve_json_invalid_format():
     """Test processing invalid CVE JSON data."""
     with pytest.raises(ValueError, match="JSON does not look like valid CVE data."):
-        await process_cve_json({"format": "INVALID", "vulnerabilities": []})
+        await process_cve_json(
+            {"format": "INVALID", "vulnerabilities": []},
+            DEFAULT_CVE_AUTHORITATIVE_SOURCE,
+        )
 
 
 async def test_process_cve_json_malformed_1():
@@ -51,7 +58,8 @@ async def test_process_cve_json_malformed_1():
             {
                 "format": "NVD_CVE",
                 "vulnerabilities": [{"cve": {"metrics": {"INVALID": "FOOBAR"}}}],
-            }
+            },
+            DEFAULT_CVE_AUTHORITATIVE_SOURCE,
         )
 
 
@@ -69,7 +77,8 @@ async def test_process_cve_json_malformed_2():
                         }
                     }
                 ],
-            }
+            },
+            DEFAULT_CVE_AUTHORITATIVE_SOURCE,
         )
 
 
@@ -88,7 +97,8 @@ async def test_process_cve_json_no_primary_metrics_type(caplog):
                     }
                 }
             ],
-        }
+        },
+        DEFAULT_CVE_AUTHORITATIVE_SOURCE,
     )
     assert cves_created == 0, "Expected no CVEs to be created"
     assert cves_updated == 0, "Expected no CVEs to be updated"
@@ -128,7 +138,9 @@ async def test_process_cve_json_primary_in_v2(db_uri, db_name):
             }
         ],
     }
-    cves_created, cves_updated = await process_cve_json(cve_json_v2)
+    cves_created, cves_updated = await process_cve_json(
+        cve_json_v2, DEFAULT_CVE_AUTHORITATIVE_SOURCE
+    )
     assert cves_created == 1, "Expected 1 CVE to be created"
     assert cves_updated == 0, "Expected no CVEs to be updated"
 
@@ -161,7 +173,7 @@ async def test_process_cve_json_empty_id():
         ],
     }
     with pytest.raises(ValueError, match="CVE ID is empty."):
-        await process_cve_json(cve_json_empty_id)
+        await process_cve_json(cve_json_empty_id, DEFAULT_CVE_AUTHORITATIVE_SOURCE)
 
 
 async def test_fetch_cve_data_invalid_url_scheme():
@@ -272,7 +284,10 @@ async def test_process_urls_create_cves():
     }
     with patch("cyhy_cvesync.cve_sync.fetch_cve_data", return_value=cve_json_data):
         created, updated, deleted = await process_urls(
-            ["https://example.com/cve.json"], cve_data_gzipped=False, concurrency=1
+            ["https://example.com/cve.json"],
+            cve_data_gzipped=False,
+            concurrency=1,
+            cve_authoritative_source=DEFAULT_CVE_AUTHORITATIVE_SOURCE,
         )
         assert created == 3, "Expected 3 CVEs to be created"
         assert updated == 0, "Expected no CVEs to be updated"
@@ -327,7 +342,10 @@ async def test_process_urls_update_cves():
     }
     with patch("cyhy_cvesync.cve_sync.fetch_cve_data", return_value=cve_json_data):
         created, updated, deleted = await process_urls(
-            ["https://example.com/cve.json"], cve_data_gzipped=False, concurrency=1
+            ["https://example.com/cve.json"],
+            cve_data_gzipped=False,
+            concurrency=1,
+            cve_authoritative_source=DEFAULT_CVE_AUTHORITATIVE_SOURCE,
         )
         assert created == 0, "Expected no CVEs to be created"
         assert updated == 2, "Expected 2 CVEs to be updated"
@@ -369,7 +387,10 @@ async def test_process_urls_delete_cves():
     }
     with patch("cyhy_cvesync.cve_sync.fetch_cve_data", return_value=cve_json_data):
         created, updated, deleted = await process_urls(
-            ["https://example.com/cve.json"], cve_data_gzipped=False, concurrency=1
+            ["https://example.com/cve.json"],
+            cve_data_gzipped=False,
+            concurrency=1,
+            cve_authoritative_source=DEFAULT_CVE_AUTHORITATIVE_SOURCE,
         )
         assert created == 0, "Expected no CVEs to be created"
         assert updated == 0, "Expected no CVEs to be updated"
@@ -411,7 +432,10 @@ async def test_process_urls_create_update_delete_cves():
     }
     with patch("cyhy_cvesync.cve_sync.fetch_cve_data", return_value=cve_json_data):
         created, updated, deleted = await process_urls(
-            ["https://example.com/cve.json"], cve_data_gzipped=False, concurrency=1
+            ["https://example.com/cve.json"],
+            cve_data_gzipped=False,
+            concurrency=1,
+            cve_authoritative_source=DEFAULT_CVE_AUTHORITATIVE_SOURCE,
         )
         assert created == 1, "Expected 1 CVE to be created"
         assert updated == 1, "Expected 1 CVE to be updated"

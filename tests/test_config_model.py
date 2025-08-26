@@ -5,7 +5,11 @@ from pydantic import ValidationError
 import pytest
 
 # cisagov Libraries
-from cyhy_cvesync.models.config_model import DEFAULT_CVE_URL_PATTERN, CVESync
+from cyhy_cvesync.models.config_model import (
+    DEFAULT_CVE_AUTHORITATIVE_SOURCE,
+    DEFAULT_CVE_URL_PATTERN,
+    CVESync,
+)
 
 
 def test_set_json_url_pattern():
@@ -34,6 +38,15 @@ def test_default_url_concurrency():
         db_name="test_db",
     )
     assert config.url_concurrency == 10
+
+
+def test_default_cve_authoritative_source():
+    """Test the default CVE authoritative source."""
+    config = CVESync(
+        db_auth_uri="mongodb://localhost:27017",
+        db_name="test_db",
+    )
+    assert config.cve_authoritative_source == DEFAULT_CVE_AUTHORITATIVE_SOURCE
 
 
 def test_invalid_db_auth_uri():

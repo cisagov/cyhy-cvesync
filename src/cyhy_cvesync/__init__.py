@@ -7,6 +7,7 @@
 #   directly used, it populates the value package_name.__version__, which is
 #   used to get version information about this Python package.
 
+DEFAULT_CVE_AUTHORITATIVE_SOURCE = "nvd@nist.gov"
 DEFAULT_CVE_URL_PATTERN = (
     "https://nvd.nist.gov/feeds/json/cve/2.0/nvdcve-2.0-{year}.json.gz"
 )
@@ -14,4 +15,4 @@ DEFAULT_CVE_URL_PATTERN = (
 from ._version import __version__  # noqa: F401, E402
 from .main import do_cve_sync  # noqa: E402
 
-__all__ = [DEFAULT_CVE_URL_PATTERN, "do_cve_sync"]
+__all__ = [DEFAULT_CVE_AUTHORITATIVE_SOURCE, DEFAULT_CVE_URL_PATTERN, "do_cve_sync"]
