@@ -84,22 +84,26 @@ async def process_cve_json(
             async with cve_map_lock:
                 cve_doc = cve_map.pop(cve_id, None)
 
-            # Determine newest CVSS metrics version containing a "Primary"
-            # metric in the CVE data
+            # Grab newest CVSS metrics from the authoritative source
             cvss_base_score = None
             cvss_version_temp = None
             try:
                 for v in ["cvssMetricV31", "cvssMetricV30", "cvssMetricV2"]:
                     if v in cve["cve"].get("metrics", {}):
                         for metric in cve["cve"]["metrics"][v]:
-                            if metric.get("type") == "Primary":
+                            if metric.get("source") == cve_authoritative_source:
                                 cvss_base_score = metric["cvssData"]["baseScore"]
                                 cvss_version_temp = metric["cvssData"]["version"]
                                 break
+                    if cvss_base_score is not None:
+                        # Break out of outer loop
+                        break
 
                 if cvss_base_score is None or cvss_version_temp is None:
                     logger.warning(
-                        "Skipping %s; no Primary CVSS v2 or v3 metric found.", cve_id
+                        "Skipping %s; no CVSS v2 or v3 metric found from authoritative source (%s).",
+                        cve_id,
+                        cve_authoritative_source,
                     )
                     continue
             except KeyError:
