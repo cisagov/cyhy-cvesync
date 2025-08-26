@@ -73,7 +73,7 @@ async def main():
     cve_url = DEFAULT_CVE_URL_PATTERN.format(year=2024)
     print(f"Processing CVE data from: {cve_url}...")
     created_cve_docs_count, updated_cve_docs_count, deleted_cve_docs_count = await process_urls(
-        [cve_url], cve_data_gzipped=True, concurrency=1,cve_authoritative_source=DEFAULT_CVE_AUTHORITATIVE_SOURCE)
+        [cve_url], cve_data_gzipped=True, concurrency=1, cve_authoritative_source=DEFAULT_CVE_AUTHORITATIVE_SOURCE)
 
     print(f"Created CVE documents: {created_cve_docs_count}")
     print(f"Updated CVE documents: {updated_cve_docs_count}")
