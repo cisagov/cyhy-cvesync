@@ -81,21 +81,23 @@ async def process_cve_json(cve_json: dict) -> Tuple[int, int]:
             async with cve_map_lock:
                 cve_doc = cve_map.pop(cve_id, None)
 
-            # Determine newest CVSS metrics version in the CVE data
-            metrics_version = None
-            for v in ["cvssMetricV31", "cvssMetricV30", "cvssMetricV2"]:
-                if v in cve["cve"]["metrics"]:
-                    metrics_version = v
-                    break
-
+            # Determine newest CVSS metrics version containing a "Primary"
+            # metric in the CVE data
+            cvss_base_score = None
+            cvss_version_temp = None
             try:
-                for metric in cve["cve"]["metrics"][metrics_version]:
-                    if metric["type"] == "Primary":
-                        cvss_base_score = metric["cvssData"]["baseScore"]
-                        cvss_version_temp = metric["cvssData"]["version"]
-                        break
-                else:
-                    logger.warning("Skipping %s; no Primary CVSS metric found.", cve_id)
+                for v in ["cvssMetricV31", "cvssMetricV30", "cvssMetricV2"]:
+                    if v in cve["cve"].get("metrics", {}):
+                        for metric in cve["cve"]["metrics"][v]:
+                            if metric.get("type") == "Primary":
+                                cvss_base_score = metric["cvssData"]["baseScore"]
+                                cvss_version_temp = metric["cvssData"]["version"]
+                                break
+
+                if cvss_base_score is None or cvss_version_temp is None:
+                    logger.warning(
+                        "Skipping %s; no Primary CVSS v2 or v3 metric found.", cve_id
+                    )
                     continue
             except KeyError:
                 logger.error("CVE object: %s", cve)
