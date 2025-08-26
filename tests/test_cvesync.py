@@ -65,7 +65,7 @@ async def test_process_cve_json_malformed_2():
                     {
                         "cve": {
                             "id": "TEST",
-                            "metrics": {"cvssMetricV30": [{"cvssData": {}}]},
+                            "metrics": {"cvssMetricV30": [{"type": "Primary"}]},
                         }
                     }
                 ],
@@ -102,10 +102,14 @@ async def test_process_cve_json_empty_id():
         "format": "NVD_CVE",
         "vulnerabilities": [
             {
-                "cve": {"id": ""},
-                "metrics": {
-                    "baseMetricV31": {"cvssData": {"baseScore": 9.8, "version": "3.1"}}
-                },
+                "cve": {
+                    "id": "",
+                    "metrics": {
+                        "cvssMetricV31": [
+                            {"cvssData": {"baseScore": 9.8, "version": "3.1"}}
+                        ]
+                    },
+                }
             }
         ],
     }
