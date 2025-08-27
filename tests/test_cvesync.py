@@ -87,7 +87,7 @@ async def test_process_cve_json_malformed_2():
 
 
 async def test_process_cve_json_no_authoritative_metrics(caplog):
-    """Test processing malformed CVE JSON data."""
+    """Test processing CVE JSON data containing no authoritative CVSS metrics."""
     # Set DEBUG log level to ensure desired log message is captured
     caplog.set_level("DEBUG")
     cves_created, cves_updated = await process_cve_json(
