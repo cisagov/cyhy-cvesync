@@ -39,14 +39,8 @@ count = 0
 hits = 0
 for cve in SAMPLE_CVE_JSON["vulnerabilities"]:
     count += 1
-    if any(
-        k in cve["cve"].get("metrics", {})
-        for k in [
-            "cvssMetricV2",
-            "cvssMetricV30",
-            "cvssMetricV31",
-        ]
-    ):
+    metrics = cve.get("cve", {}).get("metrics", {}).keys()
+    if metrics & {"cvssMetricV31", "cvssMetricV30", "cvssMetricV2"}:
         hits += 1
     if hits == SAMPLE_CVE_JSON_SMALL_VALID_CVES:
         break
