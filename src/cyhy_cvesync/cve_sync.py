@@ -20,6 +20,7 @@ from cyhy_db.models import CVEDoc
 ALLOWED_URL_SCHEMES = ["http", "https"]
 CVE_URL_RETRY_WAIT_SEC = 5
 MAX_CVE_URL_RETRIES = 10
+PREFERRED_CVSS_METRICS = ["cvssMetricV31", "cvssMetricV30", "cvssMetricV2"]
 
 # Map to track existing CVE documents that were not updated
 cve_map: Dict[str, CVEDoc] = {}
@@ -58,6 +59,8 @@ async def process_cve_json(
         id(asyncio.current_task()),
         len(cve_items),
     )
+    # Create a set of preferred CVSS metrics for quick lookup
+    preferred_cvss_metrics_set = set(PREFERRED_CVSS_METRICS)
     for cve in cve_items:
         try:
             cve_id = cve["cve"]["id"]
@@ -70,15 +73,9 @@ async def process_cve_json(
         if not cve_id:
             raise ValueError("CVE ID is empty.")
 
-        # Only process CVEs that have CVSS V2 or V3 data
-        if any(
-            k in cve["cve"].get("metrics", {})
-            for k in [
-                "cvssMetricV2",
-                "cvssMetricV30",
-                "cvssMetricV31",
-            ]
-        ):
+        # Only process CVEs that have our preferred CVSS metrics
+        metrics = cve.get("cve", {}).get("metrics", {}).keys()
+        if metrics & preferred_cvss_metrics_set:
             # Check if the CVE document already exists in the database
             global cve_map
             async with cve_map_lock:
@@ -88,7 +85,7 @@ async def process_cve_json(
             cvss_base_score = None
             cvss_version_temp = None
             try:
-                for v in ["cvssMetricV31", "cvssMetricV30", "cvssMetricV2"]:
+                for v in PREFERRED_CVSS_METRICS:
                     if v in cve["cve"].get("metrics", {}):
                         for metric in cve["cve"]["metrics"][v]:
                             if metric.get("source") == cve_authoritative_source:
@@ -101,7 +98,7 @@ async def process_cve_json(
 
                 if cvss_base_score is None or cvss_version_temp is None:
                     logger.debug(
-                        "Skipping %s; no CVSS v2 or v3 metric found from authoritative source (%s).",
+                        "Skipping %s; no preferred CVSS metrics found from authoritative source (%s).",
                         cve_id,
                         cve_authoritative_source,
                     )
