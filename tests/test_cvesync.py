@@ -262,6 +262,55 @@ async def test_process_cve_json_auth_source_in_v2(db_uri, db_name):
     await db.cves.delete_one({"_id": "TEST-V2"})
 
 
+async def test_process_cve_json_multiple_auth_metrics(db_uri, db_name):
+    """Test processing CVE JSON data with multiple authoritative CVSS metrics."""
+    cve_json = {
+        "format": "NVD_CVE",
+        "vulnerabilities": [
+            {
+                "cve": {
+                    "id": "TEST-MULTI-AUTH",
+                    "metrics": {
+                        "cvssMetricV2": [
+                            {
+                                "source": DEFAULT_CVE_AUTHORITATIVE_SOURCE,
+                                "cvssData": {"baseScore": 2.0, "version": "2.0"},
+                            }
+                        ],
+                        "cvssMetricV30": [
+                            {
+                                "source": DEFAULT_CVE_AUTHORITATIVE_SOURCE,
+                                "cvssData": {"baseScore": 3.0, "version": "3.0"},
+                            }
+                        ],
+                        "cvssMetricV31": [
+                            {
+                                "source": DEFAULT_CVE_AUTHORITATIVE_SOURCE,
+                                "cvssData": {"baseScore": 3.1, "version": "3.1"},
+                            }
+                        ],
+                    },
+                }
+            }
+        ],
+    }
+    cves_created, cves_updated = await process_cve_json(
+        cve_json, DEFAULT_CVE_AUTHORITATIVE_SOURCE
+    )
+    assert cves_created == 1, "Expected 1 CVE to be created"
+    assert cves_updated == 0, "Expected no CVEs to be updated"
+
+    client = AsyncMongoClient(db_uri)
+    db = client[db_name]
+    cve_doc = await db.cves.find_one({"_id": "TEST-MULTI-AUTH"})
+    assert cve_doc is not None, "Expected CVE document to be found in the database"
+    assert cve_doc["cvss_score"] == 3.1, "Expected CVSS score to be 3.1"
+    assert cve_doc["cvss_version"] == "3.1", "Expected CVSS version to be 3.1"
+
+    # Delete the test CVE document
+    await db.cves.delete_one({"_id": "TEST-MULTI-AUTH"})
+
+
 async def test_process_cve_json_empty_id():
     """Test processing CVE JSON data with an empty CVE ID."""
     cve_json_empty_id = {
