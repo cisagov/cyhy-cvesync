@@ -110,7 +110,7 @@ async def test_process_cve_json_no_authoritative_metrics(caplog):
     assert cves_updated == 0, "Expected no CVEs to be updated"
     cve_sync_output = caplog.text
     assert (
-        f"Skipping TEST; no CVSS v2 or v3 metric found from authoritative source ({DEFAULT_CVE_AUTHORITATIVE_SOURCE})."
+        f"Skipping TEST; no preferred CVSS metrics found from authoritative source ({DEFAULT_CVE_AUTHORITATIVE_SOURCE})."
         in cve_sync_output
     )
 
