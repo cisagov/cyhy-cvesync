@@ -6,7 +6,7 @@ from typing import Optional
 # Third-Party Libraries
 from pydantic import BaseModel, ConfigDict, Field
 
-from .. import DEFAULT_CVE_URL_PATTERN
+from .. import DEFAULT_CVE_AUTHORITATIVE_SOURCE, DEFAULT_CVE_URL_PATTERN
 
 
 class CVESync(BaseModel):
@@ -14,6 +14,10 @@ class CVESync(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    cve_authoritative_source: str = Field(
+        default=DEFAULT_CVE_AUTHORITATIVE_SOURCE,
+        description="The authoritative source for CVE data",
+    )
     db_auth_uri: str = Field(
         pattern=r"^mongodb://", description="MongoDB connection URI"
     )

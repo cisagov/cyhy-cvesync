@@ -20,6 +20,8 @@ from cyhy_db.models import CVEDoc
 ALLOWED_URL_SCHEMES = ["http", "https"]
 CVE_URL_RETRY_WAIT_SEC = 5
 MAX_CVE_URL_RETRIES = 10
+# Preferred CVSS metrics listed in order of preference
+PREFERRED_CVSS_METRICS = ["cvssMetricV31", "cvssMetricV30", "cvssMetricV2"]
 
 # Map to track existing CVE documents that were not updated
 cve_map: Dict[str, CVEDoc] = {}
@@ -28,12 +30,15 @@ cve_map_lock = asyncio.Lock()
 logger = logging.getLogger(f"{CYHY_ROOT_LOGGER}.{__name__}")
 
 
-async def process_cve_json(cve_json: dict) -> Tuple[int, int]:
+async def process_cve_json(
+    cve_json: dict, cve_authoritative_source: str
+) -> Tuple[int, int]:
     """
     Process the provided CVEs JSON and update the database with their contents.
 
     Args:
         cve_json (dict): The JSON data containing information about CVEs.
+        cve_authoritative_source (str): The authoritative source for CVE data.
 
     Returns:
         Tuple[int, int]: A tuple containing the counts of created and updated
@@ -45,19 +50,21 @@ async def process_cve_json(cve_json: dict) -> Tuple[int, int]:
     created_cve_docs_count = 0
     updated_cve_docs_count = 0
 
-    if cve_json.get("CVE_data_type") != "CVE":
+    if cve_json.get("format") != "NVD_CVE":
         raise ValueError("JSON does not look like valid CVE data.")
 
-    cve_items = cve_json.get("CVE_Items", [])
+    cve_items = cve_json.get("vulnerabilities", [])
 
     logger.info(
         "Async task %d: Starting to process %d CVEs",
         id(asyncio.current_task()),
         len(cve_items),
     )
+    # Create a set of preferred CVSS metrics for quick lookup
+    preferred_cvss_metrics_set = set(PREFERRED_CVSS_METRICS)
     for cve in cve_items:
         try:
-            cve_id = cve["cve"]["CVE_data_meta"]["ID"]
+            cve_id = cve["cve"]["id"]
         except KeyError:
             # JSON might be malformed, so we'll log what the CVE object looks like
             # and then raise an error
@@ -67,21 +74,36 @@ async def process_cve_json(cve_json: dict) -> Tuple[int, int]:
         if not cve_id:
             raise ValueError("CVE ID is empty.")
 
-        # Only process CVEs that have CVSS V2 or V3 data
-        if any(k in cve["impact"] for k in ["baseMetricV2", "baseMetricV3"]):
+        # Only process CVEs that have our preferred CVSS metrics
+        metrics = cve.get("cve", {}).get("metrics", {}).keys()
+        if metrics & preferred_cvss_metrics_set:
             # Check if the CVE document already exists in the database
             global cve_map
             async with cve_map_lock:
                 cve_doc = cve_map.pop(cve_id, None)
 
-            version = "V3" if "baseMetricV3" in cve["impact"] else "V2"
+            # Grab newest CVSS metrics from the authoritative source
+            cvss_base_score = None
+            cvss_version_temp = None
             try:
-                cvss_base_score = cve["impact"]["baseMetric" + version][
-                    "cvss" + version
-                ]["baseScore"]
-                cvss_version_temp = cve["impact"]["baseMetric" + version][
-                    "cvss" + version
-                ]["version"]
+                for v in PREFERRED_CVSS_METRICS:
+                    if v in cve["cve"].get("metrics", {}):
+                        for metric in cve["cve"]["metrics"][v]:
+                            if metric.get("source") == cve_authoritative_source:
+                                cvss_base_score = metric["cvssData"]["baseScore"]
+                                cvss_version_temp = metric["cvssData"]["version"]
+                                break
+                    if cvss_base_score is not None:
+                        # Break out of outer loop
+                        break
+
+                if cvss_base_score is None or cvss_version_temp is None:
+                    logger.debug(
+                        "Skipping %s; no preferred CVSS metrics found from authoritative source (%s).",
+                        cve_id,
+                        cve_authoritative_source,
+                    )
+                    continue
             except KeyError:
                 logger.error("CVE object: %s", cve)
                 raise ValueError("JSON does not look like valid CVE data.")
@@ -168,6 +190,7 @@ async def process_urls(
     cve_urls: List[str],
     cve_data_gzipped: bool,
     concurrency: int,
+    cve_authoritative_source: str,
 ) -> Tuple[int, int, int]:
     """
     Process URLs containing CVE data.
@@ -180,6 +203,7 @@ async def process_urls(
         cve_urls (List[str]): A list of URLs containing CVE data.
         cve_data_gzipped (bool): A flag indicating whether the CVE data is gzipped.
         concurrency (int): The number of concurrent URL requests to make and process.
+        cve_authoritative_source (str): The authoritative source for CVE data.
 
     Returns:
         Tuple[int, int, int]: A tuple containing the counts of created, updated,
@@ -201,7 +225,9 @@ async def process_urls(
         async with semaphore:
             logging.info("Processing URL: %s", cve_url)
             cve_json = await fetch_cve_data(session, cve_url, cve_data_gzipped)
-            created_count, updated_count = await process_cve_json(cve_json)
+            created_count, updated_count = await process_cve_json(
+                cve_json, cve_authoritative_source
+            )
             async with cve_docs_count_lock:
                 created_cve_docs_count += created_count
                 updated_cve_docs_count += updated_count
