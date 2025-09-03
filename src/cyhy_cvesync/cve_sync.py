@@ -20,6 +20,7 @@ from cyhy_db.models import CVEDoc
 ALLOWED_URL_SCHEMES = ["http", "https"]
 CVE_URL_RETRY_WAIT_SEC = 5
 MAX_CVE_URL_RETRIES = 10
+# Preferred CVSS metrics listed in order of preference
 PREFERRED_CVSS_METRICS = ["cvssMetricV31", "cvssMetricV30", "cvssMetricV2"]
 
 # Map to track existing CVE documents that were not updated
