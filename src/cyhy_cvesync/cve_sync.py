@@ -78,7 +78,6 @@ async def process_cve_json(
         metrics = cve.get("cve", {}).get("metrics", {}).keys()
         if metrics & preferred_cvss_metrics_set:
             # Check if the CVE document already exists in the database
-            global cve_map
             async with cve_map_lock:
                 cve_doc = cve_map.pop(cve_id, None)
 
