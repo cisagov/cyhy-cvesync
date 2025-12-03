@@ -1,8 +1,10 @@
 # cyhy-cvesync #
 
 [![GitHub Build Status](https://github.com/cisagov/cyhy-cvesync/workflows/build/badge.svg)](https://github.com/cisagov/cyhy-cvesync/actions)
+[![License](https://img.shields.io/github/license/cisagov/cyhy-cvesync)](https://spdx.org/licenses/)
 [![CodeQL](https://github.com/cisagov/cyhy-cvesync/workflows/CodeQL/badge.svg)](https://github.com/cisagov/cyhy-cvesync/actions/workflows/codeql-analysis.yml)
 [![Coverage Status](https://coveralls.io/repos/github/cisagov/cyhy-cvesync/badge.svg?branch=develop)](https://coveralls.io/github/cisagov/cyhy-cvesync?branch=develop)
+[![Code Style](https://img.shields.io/badge/Code%20Style-black-black)](https://github.com/psf/black)
 
 `cyhy-cvesync` is Python library that can retrieve JSON files containing Common
 Vulnerabilities and Exposures (CVE) data (such as those from the [National
