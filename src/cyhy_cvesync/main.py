@@ -5,7 +5,6 @@ import argparse
 import asyncio
 import logging
 import sys
-from typing import Optional
 
 # Third-Party Libraries
 from cyhy_config import get_config
@@ -33,7 +32,7 @@ def generate_urls(url_pattern: str) -> list[str]:
 
 
 async def do_cve_sync(
-    config_file: Optional[str] = None, arg_log_level: Optional[str] = None
+    config_file: str | None = None, arg_log_level: str | None = None
 ) -> None:
     """Perform the CVE synchronization."""
     setup_logging(arg_log_level)

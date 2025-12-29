@@ -6,7 +6,6 @@ import gzip
 from io import BytesIO
 import json
 import logging
-from typing import Dict, List, Tuple
 import urllib.request
 
 # Third-Party Libraries
@@ -24,7 +23,7 @@ MAX_CVE_URL_RETRIES = 10
 PREFERRED_CVSS_METRICS = ["cvssMetricV31", "cvssMetricV30", "cvssMetricV2"]
 
 # Map to track existing CVE documents that were not updated
-cve_map: Dict[str, CVEDoc] = {}
+cve_map: dict[str, CVEDoc] = {}
 cve_map_lock = asyncio.Lock()
 
 logger = logging.getLogger(f"{CYHY_ROOT_LOGGER}.{__name__}")
@@ -32,7 +31,7 @@ logger = logging.getLogger(f"{CYHY_ROOT_LOGGER}.{__name__}")
 
 async def process_cve_json(
     cve_json: dict, cve_authoritative_source: str
-) -> Tuple[int, int]:
+) -> tuple[int, int]:
     """
     Process the provided CVEs JSON and update the database with their contents.
 
@@ -186,11 +185,11 @@ async def fetch_cve_data(session: ClientSession, cve_url: str, gzipped: bool) ->
 
 
 async def process_urls(
-    cve_urls: List[str],
+    cve_urls: list[str],
     cve_data_gzipped: bool,
     concurrency: int,
     cve_authoritative_source: str,
-) -> Tuple[int, int, int]:
+) -> tuple[int, int, int]:
     """
     Process URLs containing CVE data.
 
