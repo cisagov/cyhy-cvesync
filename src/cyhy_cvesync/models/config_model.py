@@ -1,8 +1,5 @@
 """Model definitions for the configuration."""
 
-# Standard Python Libraries
-from typing import Optional
-
 # Third-Party Libraries
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -31,7 +28,7 @@ class CVESync(BaseModel):
         default=DEFAULT_CVE_URL_PATTERN,
         description="URL pattern for the CVE JSON file; note that {year} in the pattern will be substituted with each valid year",
     )
-    log_level: Optional[str] = Field(
+    log_level: str | None = Field(
         None,
         description="Logging level",
     )
