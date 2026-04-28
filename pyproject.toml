@@ -137,6 +137,3 @@ asyncio_mode = "auto"
 [tool.setuptools.dynamic]
 readme = {file = ["README.md"], content-type = "text/markdown"}
 version = {attr = "cyhy_cvesync._version.__version__"}
-
-[tool.setuptools.package-data]
-cyhy_cvesync = ["py.typed"]
