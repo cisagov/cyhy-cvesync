@@ -1,6 +1,6 @@
 """Functions for fetching and synchronizing CVE data.
 
-Here CVE stands for Commom Vulnerabilities and Exposures.
+Here CVE stands for Common Vulnerabilities and Exposures.
 """
 
 # Standard Python Libraries
