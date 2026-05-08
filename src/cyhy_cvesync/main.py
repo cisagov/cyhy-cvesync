@@ -76,7 +76,10 @@ async def do_cve_sync(
 async def main_async() -> None:
     """Set up logging and call the process function."""
     parser = argparse.ArgumentParser(
-        description="Cyber Hygiene Common Vulnerabilities and Exposures (CVE) synchronization tool",
+        description=(
+            "Cyber Hygiene Common Vulnerabilities and Exposures (CVE) "
+            "synchronization tool"
+        ),
     )
     parser.add_argument(
         "--config-file",
