@@ -102,7 +102,7 @@ CVE documents in DB after sync: 18272
 ### Environment Variables ###
 
 | Variable | Description | Default |
-|----------|-------------|---------|
+| -------- | ----------- | ------- |
 | `MONGO_INITDB_ROOT_USERNAME` | The MongoDB root username | `mongoadmin` |
 | `MONGO_INITDB_ROOT_PASSWORD` | The MongoDB root password | `secret` |
 | `DATABASE_NAME` | The name of the database to use for testing | `test` |
@@ -111,7 +111,7 @@ CVE documents in DB after sync: 18272
 ### Pytest Options ###
 
 | Option | Description | Default |
-|--------|-------------|---------|
+| ------ | ----------- | ------- |
 | `--mongo-express` | Start a local MongoDB instance and Mongo Express web interface | n/a |
 | `--mongo-image-tag` | The tag of the MongoDB Docker image to use | `docker.io/mongo:latest` |
 | `--runslow` | Run slow tests | n/a |

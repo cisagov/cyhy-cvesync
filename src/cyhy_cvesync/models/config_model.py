@@ -26,7 +26,10 @@ class CVESync(BaseModel):
     json_url_pattern: str = Field(
         pattern=r"^https?://",
         default=DEFAULT_CVE_URL_PATTERN,
-        description="URL pattern for the CVE JSON file; note that {year} in the pattern will be substituted with each valid year",
+        description=(
+            "URL pattern for the CVE JSON file; note that {year} in the "
+            "pattern will be substituted with each valid year"
+        ),
     )
     log_level: str | None = Field(
         None,

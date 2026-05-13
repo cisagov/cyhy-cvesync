@@ -105,7 +105,10 @@ def test_generate_urls():
 
 
 async def test_do_cve_sync_fast_no_arg_log_level(capfd, db_uri, db_name):
-    """Test the do_cve_sync function with a small amount of test CVE data without setting the arg_log_level."""
+    """Test do_cve_sync function without setting arg_log_level.
+
+    Here we use a small amount of test CVE data for a faster test.
+    """
     valid_config = CVESyncConfig(
         cvesync=CVESync(
             db_auth_uri=db_uri,
@@ -128,7 +131,10 @@ async def test_do_cve_sync_fast_no_arg_log_level(capfd, db_uri, db_name):
 
 
 async def test_do_cve_sync_fast_set_arg_log_level(capfd, db_uri, db_name):
-    """Test the do_cve_sync function with a small amount of test CVE data when setting the arg_log_level."""
+    """Test do_cve_sync function when setting the arg_log_level.
+
+    Here we use a small amount of test CVE data for a faster test.
+    """
     valid_config = CVESyncConfig(
         cvesync=CVESync(
             db_auth_uri=db_uri,

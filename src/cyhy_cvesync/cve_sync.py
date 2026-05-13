@@ -1,4 +1,7 @@
-"""This module provides functions for fetching and synchronizing Common Vulnerabilities and Exposures (CVE) data."""
+"""Functions for fetching and synchronizing CVE data.
+
+Here CVE stands for Common Vulnerabilities and Exposures.
+"""
 
 # Standard Python Libraries
 import asyncio
@@ -97,7 +100,8 @@ async def process_cve_json(
 
                 if cvss_base_score is None or cvss_version_temp is None:
                     logger.debug(
-                        "Skipping %s; no preferred CVSS metrics found from authoritative source (%s).",
+                        "Skipping %s; no preferred CVSS metrics found from "
+                        "authoritative source (%s).",
                         cve_id,
                         cve_authoritative_source,
                     )
