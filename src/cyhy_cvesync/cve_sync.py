@@ -210,7 +210,15 @@ async def process_urls(
     Returns:
         Tuple[int, int, int]: A tuple containing the counts of created, updated,
         and deleted CVE documents, respectively.
+
+    Raises:
+        ValueError: If no source URLs are supplied or concurrency is not positive.
     """
+    if not cve_urls:
+        raise ValueError("At least one CVE source URL is required.")
+    if concurrency < 1:
+        raise ValueError("concurrency must be at least 1.")
+
     created_cve_docs_count = 0
     deleted_cve_docs_count = 0
     updated_cve_docs_count = 0
