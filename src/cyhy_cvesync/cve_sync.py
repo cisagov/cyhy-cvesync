@@ -52,10 +52,12 @@ async def process_cve_json(
     created_cve_docs_count = 0
     updated_cve_docs_count = 0
 
-    if cve_json.get("format") != "NVD_CVE":
+    if not isinstance(cve_json, dict) or cve_json.get("format") != "NVD_CVE":
         raise ValueError("JSON does not look like valid CVE data.")
 
-    cve_items = cve_json.get("vulnerabilities", [])
+    cve_items = cve_json.get("vulnerabilities")
+    if not isinstance(cve_items, list):
+        raise ValueError("CVE data must contain a vulnerabilities array.")
 
     logger.info(
         "Async task %d: Starting to process %d CVEs",
