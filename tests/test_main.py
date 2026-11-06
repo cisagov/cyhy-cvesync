@@ -1,7 +1,6 @@
 """Test the main module."""
 
 # Standard Python Libraries
-import argparse
 import asyncio
 import sys
 from unittest.mock import AsyncMock, mock_open, patch
@@ -54,16 +53,12 @@ async def test_main_async_no_args():
     with (
         patch.object(sys, "argv", test_args),
         patch("cyhy_cvesync.main.do_cve_sync", new=AsyncMock()) as mock_do_cve_sync,
-        patch(
-            "argparse.ArgumentParser.parse_args",
-            return_value=argparse.Namespace(config_file=None, log_level="info"),
-        ),
         patch("logging.shutdown") as mock_logging_shutdown,
     ):
 
         await main_async()
 
-        mock_do_cve_sync.assert_called_once_with(None, "info")
+        mock_do_cve_sync.assert_called_once_with(None, None)
         mock_logging_shutdown.assert_called_once()
 
 
@@ -73,12 +68,6 @@ async def test_main_async_with_args():
     with (
         patch.object(sys, "argv", test_args),
         patch("cyhy_cvesync.main.do_cve_sync", new=AsyncMock()) as mock_do_cve_sync,
-        patch(
-            "argparse.ArgumentParser.parse_args",
-            return_value=argparse.Namespace(
-                config_file="test_config.yaml", log_level="debug"
-            ),
-        ),
         patch("logging.shutdown") as mock_logging_shutdown,
     ):
 

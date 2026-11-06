@@ -35,7 +35,7 @@ async def do_cve_sync(
     config_file: str | None = None, arg_log_level: str | None = None
 ) -> None:
     """Perform the CVE synchronization."""
-    setup_logging(arg_log_level)
+    setup_logging(arg_log_level or "info")
 
     # Get the configuration
     try:
@@ -90,9 +90,9 @@ async def main_async() -> None:
     parser.add_argument(
         "--log-level",
         "-l",
-        help="set the logging level",
+        help="set the logging level (overrides config; defaults to info)",
         choices=["debug", "info", "warning", "error", "critical"],
-        default="info",
+        default=None,
     )
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
