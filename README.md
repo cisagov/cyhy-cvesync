@@ -133,3 +133,16 @@ dedication](https://creativecommons.org/publicdomain/zero/1.0/).
 All contributions to this project will be released under the CC0
 dedication. By submitting a pull request, you are agreeing to comply
 with this waiver of copyright interest.
+
+## Logging level ##
+
+An explicit `--log-level` (or `-l`) takes precedence over `cvesync.log_level`
+in the configuration file. When neither is set, logging defaults to `info`.
+The same precedence and INFO fallback apply to library callers of
+`do_cve_sync()` with no `arg_log_level` override, including Lambda callers.
+Previously, those library calls inherited the existing logger level when
+neither source specified one.
+
+Configured logging levels must be recognized by Python logging. An invalid
+configured level now raises `ValueError` before synchronization when no
+explicit command-line or library override is supplied.
